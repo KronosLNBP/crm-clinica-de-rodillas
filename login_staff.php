@@ -47,7 +47,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         }
     } catch (Throwable $e) {
         error_log('[CRM] login_staff: ' . $e->getMessage());
-        $error = 'Error del servidor. Intenta más tarde.';
+        $error = ($e instanceof PDOException && in_array((string)$e->getCode(), ['42S02', '42S22'], true))
+            ? 'La base de datos no está actualizada: falta correr migracion_v2.sql.'
+            : 'Error del servidor. Intenta más tarde.';
     }
 }
 header('X-Frame-Options: DENY');

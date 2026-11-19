@@ -3,7 +3,27 @@
 declare(strict_types=1);
 require_once __DIR__ . '/conexion.php';
 
-const ESTADOS_CITA = ['Agendado', 'Confirmada', 'Express', 'Reagendada', 'Completada']; // 'Cancelada' solo vía eliminar_cita.php
+// Cualquier error no atrapado: se registra en el log y se muestra un mensaje claro (no un 500 en blanco)
+set_exception_handler(function (Throwable $e): void {
+    error_log('[CRM] ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+    $sqlState = $e instanceof PDOException ? (string)$e->getCode() : '';
+    $msg = in_array($sqlState, ['42S02', '42S22'], true)
+        ? 'La base de datos no está actualizada: falta correr migracion_v2.sql en phpMyAdmin.'
+        : 'Ocurrió un error en el servidor. Intenta de nuevo.';
+    if (!headers_sent()) {
+        http_response_code(500);
+    }
+    if (str_contains((string)($_SERVER['HTTP_ACCEPT'] ?? ''), 'text/html')) {
+        if (!headers_sent()) header('Content-Type: text/html; charset=utf-8');
+        echo '<div style="font-family:sans-serif;max-width:520px;margin:80px auto;padding:20px;border:1px solid #fca5a5;background:#fef2f2;border-radius:10px;color:#991b1b">'
+           . '<strong>Error</strong><br>' . htmlspecialchars($msg) . '</div>';
+    } else {
+        if (!headers_sent()) header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['status' => 'error', 'message' => $msg], JSON_UNESCAPED_UNICODE);
+    }
+});
+
+const ESTADOS_CITA =['Agendado', 'Confirmada', 'Express', 'Reagendada', 'Completada']; // 'Cancelada' solo vía eliminar_cita.php
 const ASISTENCIAS  = ['Pendiente', 'Asistió', 'No Asistió'];
 const MAX_PDF_BYTES = 5 * 1024 * 1024;
 
@@ -30,7 +50,10 @@ function error_usuario(string $mensaje, int $codigo = 422): never
 function error_servidor(Throwable $e): never
 {
     error_log('[CRM] ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
-    responder(['status' => 'error', 'message' => 'Ocurrió un error en el servidor. Intenta de nuevo.'], 500);
+    $falta = $e instanceof PDOException && in_array((string)$e->getCode(), ['42S02', '42S22'], true);
+    responder(['status' => 'error', 'message' => $falta
+        ? 'La base de datos no está actualizada: falta correr migracion_v2.sql.'
+        : 'Ocurrió un error en el servidor. Intenta de nuevo.'], 500);
 }
 
 function solo_post(): void
