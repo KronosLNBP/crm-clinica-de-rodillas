@@ -80,7 +80,7 @@ header('X-Frame-Options: DENY');
         <?php if ($error !== ''): ?>
             <div class="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center border border-red-200"><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
-        <button class="w-full py-3 rounded-lg font-bold text-white bg-[#4361ee] hover:bg-blue-700">Entrar</button>
+        <button class="w-full py-3 rounded-lg font-bold text-white bg-[#0E7C66] hover:bg-[#0A5E4D]">Entrar</button>
     </form>
 </body>
 </html>

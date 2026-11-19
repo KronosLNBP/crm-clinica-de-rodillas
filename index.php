@@ -17,15 +17,65 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CRM Clínica de Rodillas - Agenda</title>
     <meta name="csrf-token" content="<?= htmlspecialchars(csrf_token()) ?>">
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { theme: { extend: {
+            fontFamily: { sans: ['Figtree', 'system-ui', 'sans-serif'] },
+            colors: { tinta: '#1E2B33', niebla: '#F3F6F5', jade: { DEFAULT: '#0E7C66', claro: '#E3F2EE', oscuro: '#0A5E4D' }, ambar: '#E8A33D', rosa: '#C8445A' }
+        } } };
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        .filtro-activo { border-color: black !important; color: black !important; }
-        .menu-activo { text-decoration: underline; font-weight: bold; text-underline-offset: 4px; }
+        :root { --tinta: #1E2B33; --niebla: #F3F6F5; --jade: #0E7C66; --jade-claro: #E3F2EE; --linea: #DDE5E2; --suave: #6B7B83; }
+        body { font-family: 'Figtree', system-ui, sans-serif; color: var(--tinta); }
+        .tabular { font-variant-numeric: tabular-nums; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-thumb { background: #C9D4D0; border-radius: 10px; }
+        :focus-visible { outline: 3px solid #0E7C66; outline-offset: 2px; }
+
+        /* Barra lateral */
+        .nav-item { display: flex; align-items: center; gap: .75rem; width: 100%; padding: .6rem .75rem; border-radius: .75rem; font-weight: 600; color: #3C4A52; text-align: left; transition: background .15s; }
+        .nav-item:hover { background: #E9EFED; }
+        .nav-item svg { width: 20px; height: 20px; flex-shrink: 0; color: #6B7B83; }
+        .menu-item { cursor: pointer; }
+        .menu-item.menu-activo { background: #fff; box-shadow: inset 0 0 0 2px var(--jade); color: var(--tinta); }
+        .punto { width: .7rem; height: .7rem; border-radius: 999px; flex-shrink: 0; }
+
+        /* Filtros tipo "chip" */
+        .filtro-btn, .filtro-pac-btn { border: 1.5px solid var(--linea) !important; background: #fff !important; color: #3C4A52 !important; border-radius: 999px !important; box-shadow: none !important; font-weight: 600 !important; }
+        .filtro-btn:hover, .filtro-pac-btn:hover { border-color: #9DB3AB !important; }
+        .filtro-activo { background: var(--tinta) !important; color: #fff !important; border-color: var(--tinta) !important; }
+
+        /* Selector de vista */
+        .vista-btn { padding: .45rem 1rem; border-radius: .6rem; font-weight: 600; color: #4B5A62; }
+        .vista-btn[aria-pressed="true"] { background: #fff; color: var(--tinta); box-shadow: 0 1px 2px rgba(30,43,51,.15); }
+
+        /* Calendario: encabezados sobrios en lugar de azul brillante */
+        #cuadricula-calendario .bg-\[\#007bff\] { background: #fff !important; color: var(--tinta) !important; border-bottom: 1px solid var(--linea); }
+        #cuadricula-calendario .bg-\[\#007bff\] .text-blue-100 { color: var(--suave) !important; }
+        #cuadricula-calendario .bg-red-500 { background: #FBE9EC !important; color: #A3263B !important; }
+        #cuadricula-calendario .bg-red-500 .text-blue-100 { color: #A3263B !important; }
+        .es-hoy { background-color: #F1FAF7 !important; }
+        .es-hoy-mes { box-shadow: inset 0 3px 0 var(--jade); }
+
+        /* Ventanas emergentes más limpias */
+        .fixed.inset-0.bg-black { background-color: rgba(30, 43, 51, .45) !important; backdrop-filter: blur(3px); }
+        .fixed.inset-0.bg-black > div { border-radius: 1.25rem !important; }
+        .bg-\[\#4361ee\] { background-color: var(--jade) !important; }
+        .bg-\[\#1e3a8a\] { background-color: var(--tinta) !important; }
+        .text-\[\#1e3a8a\] { color: var(--tinta) !important; }
+        /* Formulario de cita y ventanas: mismo lenguaje visual */
+        [id^="modal"] input:not([type=checkbox]):not([type=radio]), [id^="modal"] select, [id^="modal"] textarea { border-radius: .65rem !important; border-color: var(--linea) !important; }
+        #tituloModal { color: var(--tinta) !important; font-weight: 800; }
+        #botonesEdicion button { background: #fff !important; color: var(--tinta) !important; border: 1.5px solid var(--linea); border-radius: .7rem !important; padding-top: .6rem !important; padding-bottom: .6rem !important; }
+        #botonesEdicion button:hover { border-color: #9DB3AB; }
+        #botonesEdicion #btnEliminar { color: #A3263B !important; border-color: #F2C9D0; }
+        #btnGuardar { background: var(--jade) !important; border-radius: .8rem !important; font-size: 1.05rem; }
+        #btnGuardar:hover { background: #0A5E4D !important; }
         .rol-contabilidad .solo-operacion { display: none !important; } /* contabilidad: solo consulta */
+        @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
         
         /* REGLAS DE IMPRESIÓN CORREGIDAS */
         @media print {
@@ -43,53 +93,78 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen rol-<?= $h($rol) ?>">
+<body class="bg-niebla min-h-screen rol-<?= $h($rol) ?>">
+<?php $coloresSuc = ['Del Valle' => '#0E7C66', 'Tepeyac' => '#3B6FB6', 'Balbuena' => '#B4559B', 'Pachuca' => '#7A5AC8', 'Puebla' => '#D9822B']; ?>
+<div class="md:flex min-h-screen">
 
-    <nav class="bg-[#4361ee] text-white pt-4 pb-4 px-8 shadow-md">
-        <div class="max-w-6xl mx-auto">
-            <div class="flex justify-between items-center mb-4"><h1 class="text-xl font-bold">Clínica de rodillas</h1><div class="text-sm">👤 <?= htmlspecialchars($usuario['nombre']) ?> <?php if ($rol === 'admin'): ?>· <a href="admin.php" class="underline hover:text-gray-200">⚙️ Admin</a> <?php endif; ?>· <a href="logout_staff.php" class="underline hover:text-gray-200">Salir</a></div></div>
-            <ul class="flex flex-wrap gap-x-8 gap-y-2 text-sm font-medium cursor-pointer">
-                <?php foreach ($listaSucursales as $i => $suc): ?><li id="menu-suc-<?= $i ?>" onclick="cargarCitas(<?= $h(json_encode($suc, JSON_UNESCAPED_UNICODE)) ?>, 'menu-suc-<?= $i ?>')" class="menu-item hover:text-gray-200"><?= $h($suc) ?></li>
+    <!-- BARRA LATERAL -->
+    <aside class="md:w-64 md:min-h-screen md:sticky md:top-0 md:h-screen md:overflow-y-auto bg-niebla md:border-r border-[#DDE5E2] flex flex-col p-4 gap-5 no-print">
+        <div class="flex items-center gap-3 px-1">
+            <div class="w-10 h-10 rounded-xl bg-jade text-white grid place-items-center font-extrabold text-lg">CR</div>
+            <div><p class="font-extrabold leading-tight">Clínica de Rodillas</p><p class="text-xs text-[#6B7B83]">Hola, <?= $h(explode(' ', $usuario['nombre'])[0]) ?></p></div>
+            <a href="logout_staff.php" class="md:hidden ml-auto text-sm font-semibold underline">Salir</a>
+        </div>
+
+        <button onclick="nuevaCitaRapida()" class="solo-operacion w-full bg-jade hover:bg-jade-oscuro text-white font-bold py-3 rounded-xl shadow-sm text-base">+ Nueva cita</button>
+        <button onclick="abrirCitaExpress()" class="solo-operacion -mt-3 w-full flex items-center justify-center gap-2 border-2 border-ambar text-[#8A5A12] hover:bg-[#FDF3E3] font-bold py-2 rounded-xl text-sm"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Llegó sin cita</button>
+
+        <nav aria-label="Sucursales">
+            <p class="text-xs font-semibold text-[#6B7B83] px-2 mb-1">Sucursal</p>
+            <ul class="flex md:flex-col gap-1 overflow-x-auto">
+                <?php foreach ($listaSucursales as $i => $suc): ?><li id="menu-suc-<?= $i ?>" data-sucursal="<?= $h($suc) ?>" onclick="cargarCitas(<?= $h(json_encode($suc, JSON_UNESCAPED_UNICODE)) ?>, 'menu-suc-<?= $i ?>')" class="menu-item nav-item whitespace-nowrap"><span class="punto" style="background: <?= $h($coloresSuc[$suc] ?? '#6B7B83') ?>"></span><?= $h($suc) ?></li>
                 <?php endforeach; ?>
-                <?php if (!$sucUsuario): ?><li id="menu-todas" onclick="cargarCitas('', 'menu-todas')" class="menu-item hover:text-gray-200 menu-activo">Ver Todas</li><?php endif; ?>
+                <?php if (!$sucUsuario): ?><li id="menu-todas" data-sucursal="" onclick="cargarCitas('', 'menu-todas')" class="menu-item nav-item whitespace-nowrap menu-activo"><span class="punto" style="background: conic-gradient(#0E7C66 0 25%, #3B6FB6 0 50%, #7A5AC8 0 75%, #D9822B 0)"></span>Todas</li><?php endif; ?>
             </ul>
-        </div>
-    </nav>
+        </nav>
 
-    <div class="max-w-[1200px] mx-auto mt-6 flex justify-center gap-4 flex-wrap">
-        <button id="btn-filtro-todos" onclick="filtrarPorTipo('', 'btn-filtro-todos')" class="filtro-btn px-4 py-2 bg-gray-300 text-gray-800 border-2 border-transparent rounded shadow hover:bg-gray-400 font-bold text-sm transition filtro-activo">Todos</button>
-        <button id="btn-filtro-sports" onclick="filtrarPorTipo('Sports medicine', 'btn-filtro-sports')" class="filtro-btn px-4 py-2 bg-blue-100 text-blue-800 border-2 border-blue-200 rounded shadow hover:bg-blue-200 font-bold text-sm transition">Sports Medicine</button>
-        <button id="btn-filtro-clinica" onclick="filtrarPorTipo('Clínica de rodillas', 'btn-filtro-clinica')" class="filtro-btn px-4 py-2 bg-green-100 text-green-800 border-2 border-green-200 rounded shadow hover:bg-green-200 font-bold text-sm transition">Clínica de Rodillas</button>
-        <button id="btn-filtro-camara" onclick="filtrarPorTipo('Cámara Hiperbárica', 'btn-filtro-camara')" class="filtro-btn px-4 py-2 bg-purple-100 text-purple-800 border-2 border-purple-200 rounded shadow hover:bg-purple-200 font-bold text-sm transition">Cámara Hiperbárica</button>
-    </div>
+        <nav aria-label="Herramientas" class="flex md:flex-col gap-1 overflow-x-auto">
+            <p class="hidden md:block text-xs font-semibold text-[#6B7B83] px-2 mb-1">Herramientas</p>
+            <button onclick="abrirRemisiones()" class="solo-operacion nav-item whitespace-nowrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg> Cobros del día</button>
+            <button onclick="abrirModalAsistencias()" class="solo-operacion nav-item whitespace-nowrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg> Pasar asistencia</button>
+            <button onclick="abrirDirectorio()" class="nav-item whitespace-nowrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> Pacientes y citas</button>
+            <button onclick="abrirHistorialCortes()" class="nav-item whitespace-nowrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg> Cortes de caja</button>
+            <button onclick="abrirAusencias()" class="solo-operacion nav-item whitespace-nowrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 15l6 4M15 15l-6 4"/></svg> Ausencias</button>
+            <?php if ($rol === 'admin'): ?><a href="admin.php" class="nav-item whitespace-nowrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Administración</a><?php endif; ?>
+        </nav>
 
-    <div class="max-w-[1200px] mx-auto mt-3 flex justify-center gap-3 items-center flex-wrap">
-        <span class="text-sm font-bold text-gray-500 uppercase tracking-wide">Estatus:</span>
-        <button id="btn-pac-todos" onclick="filtrarPorPaciente('', 'btn-pac-todos')" class="filtro-pac-btn px-3 py-1 bg-gray-200 text-gray-700 border-2 border-transparent rounded shadow-sm hover:bg-gray-300 font-bold text-xs transition filtro-activo">Ambos</button>
-        <button id="btn-pac-si" onclick="filtrarPorPaciente('Si', 'btn-pac-si')" class="filtro-pac-btn px-3 py-1 bg-teal-100 text-teal-800 border-2 border-teal-200 rounded shadow-sm hover:bg-teal-200 font-bold text-xs transition">Ya es paciente</button>
-        <button id="btn-pac-no" onclick="filtrarPorPaciente('No', 'btn-pac-no')" class="filtro-pac-btn px-3 py-1 bg-orange-100 text-orange-800 border-2 border-orange-200 rounded shadow-sm hover:bg-orange-200 font-bold text-xs transition">Primera vez (No)</button>
-    </div>
+        <div class="mt-auto hidden md:block"><a href="logout_staff.php" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg> Cerrar sesión</a></div>
+    </aside>
 
-    <div class="max-w-[1200px] mx-auto mt-4 p-6 bg-white rounded-lg shadow-lg mb-10">
-        <div class="flex justify-center items-center gap-3 mb-6 flex-wrap">
-            <h2 id="titulo-calendario" class="text-2xl font-bold text-[#1e3a8a] mr-2">Agenda - General</h2>
-            <button id="btn-toggle-vista" onclick="toggleVista()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md shadow-md text-sm font-bold transition-colors">🗓️ Cambiar a Mensual</button>
-            <button onclick="abrirModalAsistencias()" class="solo-operacion bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md shadow-md text-sm font-bold flex items-center gap-2 transition-colors">📊 Ver Asistencias</button>
-            <button onclick="abrirRemisiones()" class="solo-operacion bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md shadow-md text-sm font-bold flex items-center gap-2 transition-colors">🧾 Remisiones</button>
-            <button onclick="abrirCitaExpress()" class="solo-operacion bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md shadow-md text-sm font-bold flex items-center gap-2 transition-colors ml-2">⚡ Cita en el Momento</button>
-            <button onclick="abrirDirectorio()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md shadow-md text-sm font-bold flex items-center gap-2 transition-colors ml-2">📋 Directorio</button>
-            <button onclick="abrirHistorialCortes()" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md shadow-md text-sm font-bold flex items-center gap-2 transition-colors ml-2">📈 Historial de Cortes</button>
-            <button onclick="abrirAusencias()" class="solo-operacion bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md shadow-md text-sm font-bold flex items-center gap-2 transition-colors ml-2">🚫 Ausencias</button>
+    <!-- ÁREA PRINCIPAL -->
+    <main class="flex-1 min-w-0 p-4 md:p-8">
+        <header class="flex flex-wrap items-end justify-between gap-4 mb-5">
+            <div>
+                <p id="titulo-calendario" class="text-sm font-semibold text-jade">Agenda</p>
+                <h1 id="texto-rango" class="text-3xl md:text-4xl font-extrabold tracking-tight tabular">Cargando…</h1>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+                <div class="flex items-center bg-white border border-[#DDE5E2] rounded-xl">
+                    <button onclick="cambiarRango(-1)" aria-label="Anterior" class="px-3 py-2 hover:bg-niebla rounded-l-xl text-lg font-bold">‹</button>
+                    <button onclick="irHoy()" class="px-4 py-2 font-semibold border-x border-[#DDE5E2] hover:bg-niebla">Hoy</button>
+                    <button onclick="cambiarRango(1)" aria-label="Siguiente" class="px-3 py-2 hover:bg-niebla rounded-r-xl text-lg font-bold">›</button>
+                </div>
+                <div class="flex bg-[#E6ECEA] p-1 rounded-xl" role="group" aria-label="Vista">
+                    <button class="vista-btn" data-vista="dia" onclick="setVista('dia')">Día</button>
+                    <button class="vista-btn" data-vista="semana" onclick="setVista('semana')">Semana</button>
+                    <button class="vista-btn" data-vista="mes" onclick="setVista('mes')">Mes</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex flex-wrap items-center gap-2 mb-4 text-sm">
+            <button id="btn-filtro-todos" onclick="filtrarPorTipo('', 'btn-filtro-todos')" class="filtro-btn px-3 py-1.5 filtro-activo">Todos los tratamientos</button>
+            <button id="btn-filtro-sports" onclick="filtrarPorTipo('Sports medicine', 'btn-filtro-sports')" class="filtro-btn px-3 py-1.5">Sports medicine</button>
+            <button id="btn-filtro-clinica" onclick="filtrarPorTipo('Clínica de rodillas', 'btn-filtro-clinica')" class="filtro-btn px-3 py-1.5">Clínica de rodillas</button>
+            <button id="btn-filtro-camara" onclick="filtrarPorTipo('Cámara Hiperbárica', 'btn-filtro-camara')" class="filtro-btn px-3 py-1.5">Cámara hiperbárica</button>
+            <span class="w-px h-6 bg-[#DDE5E2] mx-1 hidden sm:block"></span>
+            <button id="btn-pac-todos" onclick="filtrarPorPaciente('', 'btn-pac-todos')" class="filtro-pac-btn px-3 py-1.5 filtro-activo">Todos los pacientes</button>
+            <button id="btn-pac-si" onclick="filtrarPorPaciente('Si', 'btn-pac-si')" class="filtro-pac-btn px-3 py-1.5">Ya son pacientes</button>
+            <button id="btn-pac-no" onclick="filtrarPorPaciente('No', 'btn-pac-no')" class="filtro-pac-btn px-3 py-1.5">Primera vez</button>
         </div>
-        
-        <div class="flex justify-between items-center mb-6">
-            <button onclick="cambiarRango(-1)" class="bg-[#2563eb] hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-semibold shadow transition-colors">&lt; Anterior</button>
-            <h3 id="texto-rango" class="text-xl font-bold text-[#1e3a8a]">Cargando...</h3>
-            <button onclick="cambiarRango(1)" class="bg-[#2563eb] hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-semibold shadow transition-colors">Siguiente &gt;</button>
-        </div>
-        
-        <div id="cuadricula-calendario" class="border border-gray-300 rounded-lg overflow-hidden bg-gray-50 shadow-inner"></div>
-    </div>
+
+        <div id="cuadricula-calendario" class="bg-white border border-[#DDE5E2] rounded-2xl overflow-hidden"></div>
+    </main>
+</div>
 
     <!-- NUEVO MODAL: HISTORIAL DE CORTES -->
     <div id="modalHistorialCortes" class="fixed inset-0 bg-black bg-opacity-60 hidden flex justify-center items-center z-[70] p-4">
@@ -452,7 +527,7 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
 
         const SUCURSAL_FIJA = <?= json_encode($sucUsuario['nombre_sucursal'] ?? '', JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?>;
         const PUEDE_NOTAS = <?= $esClinico ? 'true' : 'false' ?>;
-        let sucursalActual = ''; let tipoTratamientoActual = ''; let yaPacienteActual = ''; let citasGlobales = []; let vistaActual = 'semana';
+        let sucursalActual = ''; let tipoTratamientoActual = ''; let yaPacienteActual = ''; let citasGlobales = []; let vistaActual = (() => { try { return localStorage.getItem('crm_vista') || 'dia'; } catch (e) { return 'dia'; } })(); let diaActual = new Date();
         const nombresMesesCorto = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
         const nombresMesesCompletos = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
@@ -785,9 +860,32 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
         // ==========================================
         // VISTAS CALENDARIO Y AGENDA DIA
         // ==========================================
-        function toggleVista() { vistaActual = vistaActual === 'semana' ? 'mes' : 'semana'; document.getElementById('btn-toggle-vista').innerHTML = vistaActual === 'semana' ? '🗓️ Cambiar a Mensual' : '📅 Cambiar a Semanal'; actualizarCuadricula(); cargarCitas(sucursalActual, ''); }
-        function cambiarRango(direccion) { if (vistaActual === 'semana') { lunesActual.setDate(lunesActual.getDate() + (direccion * 7)); } else { mesActualDate.setMonth(mesActualDate.getMonth() + direccion); } actualizarCuadricula(); cargarCitas(sucursalActual, ''); }
-        function actualizarCuadricula() { if (vistaActual === 'semana') generarCuadriculaSemanal(); else generarCuadriculaMensual(); }
+        function toggleVistaAnterior() { vistaActual = vistaActual === 'semana' ? 'mes' : 'semana'; document.getElementById('btn-toggle-vista').innerHTML = vistaActual === 'semana' ? '🗓️ Cambiar a Mensual' : '📅 Cambiar a Semanal'; actualizarCuadricula(); cargarCitas(sucursalActual, ''); }
+        function cambiarRango(direccion) {
+            if (vistaActual === 'dia') { diaActual.setDate(diaActual.getDate() + direccion); }
+            else if (vistaActual === 'semana') { lunesActual.setDate(lunesActual.getDate() + (direccion * 7)); diaActual = new Date(lunesActual); }
+            else { mesActualDate.setMonth(mesActualDate.getMonth() + direccion); diaActual = new Date(mesActualDate.getFullYear(), mesActualDate.getMonth(), 1); }
+            actualizarCuadricula(); cargarCitas(sucursalActual, '');
+        }
+        function lunesDe(d) { const x = new Date(d); const w = x.getDay(); x.setDate(x.getDate() - w + (w === 0 ? -6 : 1)); return x; }
+        function setVista(v) {
+            vistaActual = v; try { localStorage.setItem('crm_vista', v); } catch (e) {}
+            lunesActual = lunesDe(diaActual); mesActualDate = new Date(diaActual.getFullYear(), diaActual.getMonth(), 1);
+            document.querySelectorAll('.vista-btn').forEach(b => b.setAttribute('aria-pressed', b.dataset.vista === v ? 'true' : 'false'));
+            actualizarCuadricula(); cargarCitas(sucursalActual, '');
+        }
+        function irHoy() { diaActual = new Date(); setVista(vistaActual); }
+        function nuevaCitaRapida() {
+            const f = vistaActual === 'dia' ? formatearFechaISO(diaActual) : formatearFechaISO(new Date());
+            const hd = horarioDia(new Date(f + 'T12:00').getDay());
+            abrirModalNueva(f, hd ? aHora(hd.ini) : '09:00');
+        }
+        function actualizarCuadricula() {
+            if (vistaActual === 'dia') { generarVistaDia(); return; }
+            if (vistaActual === 'semana') generarCuadriculaSemanal(); else generarCuadriculaMensual();
+            const hoy = formatearFechaISO(new Date());   // resaltar hoy
+            document.querySelectorAll(`[id^="celda-sem-${hoy}-"], #celda-mes-${hoy}`).forEach(c => vistaActual === 'mes' ? c.parentElement.classList.add('es-hoy', 'es-hoy-mes') : c.classList.add('es-hoy'));
+        }
 
         // ===== Horarios por sucursal y ausencias =====
         let configAgenda = { sucursales: [], bloqueos: [] };
@@ -898,7 +996,7 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
         }
 
         function abrirModalAsistencias() {
-            const fechasVisiblesStr = []; let fechaReferencia = vistaActual === 'semana' ? lunesActual : mesActualDate;
+            const fechasVisiblesStr = []; let fechaReferencia = vistaActual === 'semana' ? lunesActual : (vistaActual === 'dia' ? diaActual : mesActualDate);
             const mes = fechaReferencia.getMonth(); const anio = fechaReferencia.getFullYear(); const diasEnMes = new Date(anio, mes + 1, 0).getDate();
             for (let i = 1; i <= diasEnMes; i++) { fechasVisiblesStr.push(`${anio}-${(mes + 1).toString().padStart(2, '0')}-${i.toString().padStart(2, '0')}`); }
             const citasRango = citasGlobales.filter(cita => fechasVisiblesStr.includes(cita.fecha)).sort((a, b) => a.fecha.localeCompare(b.fecha) || a.hora.localeCompare(b.hora));
@@ -921,7 +1019,7 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
         function abrirModalEditar(cita) {
             document.getElementById('modalCita').classList.remove('hidden'); document.getElementById('tituloModal').innerText = "Editar Cita"; document.getElementById('checkSiAsistio').checked = false; document.getElementById('checkNoAsistio').checked = false;
             if (cita.asistencia === 'Asistió') document.getElementById('checkSiAsistio').checked = true; else if (cita.asistencia === 'No Asistió') document.getElementById('checkNoAsistio').checked = true;
-            document.getElementById('inputIdCita').value = cita.id_cita; document.getElementById('inputFecha').value = cita.fecha; document.getElementById('inputHora').value = cita.hora.substring(0, 5); document.getElementById('inputEstado').value = cita.estado; document.getElementById('inputPaciente').value = cita.paciente; document.getElementById('inputTelefono').value = cita.telefono; document.getElementById('inputEdad').value = cita.edad; document.getElementById('inputYaPaciente').value = cita.ya_es_paciente; document.getElementById('inputTipo').value = cita.tipo_tratamiento; document.getElementById('inputAsistente').value = cita.asistente; document.getElementById('inputSucursal').value = cita.sucursal;
+            document.getElementById('inputIdCita').value = cita.id_cita; document.getElementById('inputFecha').value = cita.fecha; document.getElementById('inputHora').value = cita.hora.substring(0, 5); document.getElementById('inputEstado').value = cita.estado; document.getElementById('inputPaciente').value = cita.paciente; document.getElementById('inputTelefono').value = cita.telefono; document.getElementById('inputEdad').value = cita.edad ?? ''; document.getElementById('inputYaPaciente').value = cita.ya_es_paciente; document.getElementById('inputTipo').value = cita.tipo_tratamiento; document.getElementById('inputAsistente').value = cita.asistente || ''; document.getElementById('inputSucursal').value = cita.sucursal;
             document.getElementById('botonesEdicion').classList.remove('hidden'); document.getElementById('btnPerfil').classList.remove('hidden'); document.getElementById('btnCarnet').classList.remove('hidden'); document.getElementById('btnSubsecuente').classList.remove('hidden');
             const btnEliminar = document.getElementById('btnEliminar'); btnEliminar.classList.remove('hidden');
             if (cita.asistencia === 'Asistió') { btnEliminar.disabled = true; btnEliminar.classList.add('opacity-50', 'cursor-not-allowed'); } else { btnEliminar.disabled = false; btnEliminar.classList.remove('opacity-50', 'cursor-not-allowed'); }
@@ -943,7 +1041,10 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
         function rangoVisible() {
             // Semana: se pide el/los mes(es) que toca la semana, para que "Ver Asistencias" tenga el mes completo.
             let ini, fin;
-            if (vistaActual === 'semana') {
+            if (vistaActual === 'dia') {
+                ini = new Date(diaActual.getFullYear(), diaActual.getMonth(), 1);
+                fin = new Date(diaActual.getFullYear(), diaActual.getMonth() + 1, 0);
+            } else if (vistaActual === 'semana') {
                 const sab = new Date(lunesActual); sab.setDate(sab.getDate() + 6);
                 ini = new Date(lunesActual.getFullYear(), lunesActual.getMonth(), 1);
                 fin = new Date(sab.getFullYear(), sab.getMonth() + 1, 0);
@@ -957,7 +1058,7 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
         function cargarCitas(sucursal, botonMenuId = '') {
             sucursalActual = sucursal;
             if(botonMenuId !== '') { document.querySelectorAll('.menu-item').forEach(li => li.classList.remove('menu-activo')); document.getElementById(botonMenuId).classList.add('menu-activo'); }
-            document.getElementById('titulo-calendario').innerText = `Agenda: ${sucursal === '' ? 'Todas las Sucursales' : sucursal}`;
+            document.getElementById('titulo-calendario').innerText = sucursal === '' ? 'Agenda de todas las sucursales' : `Agenda de ${sucursal}`;
             const r = rangoVisible();
             const qs = new URLSearchParams({ sucursal, tipo: tipoTratamientoActual, ya_es_paciente: yaPacienteActual, desde: r.desde, hasta: r.hasta });
             Promise.all([
@@ -986,6 +1087,7 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
         }
 
         function renderizarCitasEnCalendario(citas) {
+            if (vistaActual === 'dia') { generarVistaDia(); return; }
             document.querySelectorAll('.cita-indicador').forEach(el => el.remove()); document.querySelectorAll('.btn-ver-mas').forEach(el => el.remove());
             const citasPorCelda = {};
             citas.forEach(cita => {
@@ -1041,6 +1143,62 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
             formData.append('asistencia', asistenciaFinal);
             enviarCita(formData, document.getElementById('inputIdCita').value);
         });
+
+        // ===== Vista Día: lista de citas con acciones de un clic =====
+        const COLOR_SUC = { 'Del Valle': '#0E7C66', 'Tepeyac': '#3B6FB6', 'Balbuena': '#B4559B', 'Pachuca': '#7A5AC8', 'Puebla': '#D9822B' };
+        function generarVistaDia() {
+            const f = formatearFechaISO(diaActual);
+            const nombre = diaActual.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+            document.getElementById('texto-rango').innerText = nombre.charAt(0).toUpperCase() + nombre.slice(1);
+            const citas = citasGlobales.filter(c => c.fecha === f).sort((a, b) => a.hora.localeCompare(b.hora));
+            const hd = horarioDia(diaActual.getDay()); const bl = bloqueosDe(f);
+            const asis = citas.filter(c => c.asistencia === 'Asistió').length, faltas = citas.filter(c => c.asistencia === 'No Asistió').length;
+            let html = `<div class="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-[#DDE5E2]">
+                <p class="text-[#4B5A62]">${hd ? `Abierto de <strong class="tabular">${aHora(hd.ini)}</strong> a <strong class="tabular">${aHora(hd.fin)}</strong>` : '<strong>Cerrado</strong> este día'}</p>
+                <p class="text-[#4B5A62] tabular"><strong class="text-tinta">${citas.length}</strong> citas, <span class="text-[#2F7D4F] font-semibold">${asis} asistieron</span>, <span class="text-rosa font-semibold">${faltas} faltaron</span></p></div>`;
+            html += bl.map(b => `<div class="mx-5 mt-4 rounded-xl bg-[#FBE9EC] text-[#A3263B] px-4 py-3 font-semibold">🚫 ${esc(textoBloqueo(b))}</div>`).join('');
+            if (!citas.length) {
+                html += `<div class="px-5 py-16 text-center"><p class="text-xl font-bold">No hay citas este día</p><p class="text-[#6B7B83] mt-1">Agenda una con el botón “Nueva cita”.</p></div>`;
+            } else {
+                html += '<ul class="divide-y divide-[#EDF2F0]">' + citas.map(c => {
+                    const estado = c.asistencia === 'Asistió' ? '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-[#E4F4EA] text-[#2F7D4F]">Asistió</span>'
+                                 : c.asistencia === 'No Asistió' ? '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-[#FBE9EC] text-[#A3263B]">Faltó</span>'
+                                 : c.estado === 'Confirmada' ? '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-jade-claro text-jade-oscuro">Confirmada</span>'
+                                 : '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-[#FDF3E3] text-[#8A5A12]">Por llegar</span>';
+                    const nuevo = c.ya_es_paciente === 'Si' ? '' : '<span class="text-xs font-semibold text-[#8A5A12]">Primera vez</span>';
+                    const pendiente = c.asistencia !== 'Asistió' && c.asistencia !== 'No Asistió';
+                    return `<li class="flex flex-wrap md:flex-nowrap items-center gap-4 px-5 py-4 hover:bg-[#F8FAF9]">
+                        <div class="w-16 text-2xl font-extrabold tabular">${esc(c.hora.substring(0, 5))}</div>
+                        <span class="w-1.5 self-stretch rounded-full" style="background:${COLOR_SUC[c.sucursal] || '#6B7B83'}"></span>
+                        <button onclick="abrirModalEditar(citasGlobales.find(x => x.id_cita == ${parseInt(c.id_cita)}))" class="flex-1 min-w-[12rem] text-left">
+                            <p class="text-lg font-bold leading-tight">${esc(c.paciente)} ${c.estado === 'Express' ? '<span class="text-xs font-bold text-[#8A5A12]">⚡ sin cita</span>' : ''}</p>
+                            <p class="text-sm text-[#6B7B83]">${esc(c.tipo_tratamiento)}${sucursalActual ? '' : ', ' + esc(c.sucursal)} ${nuevo}</p>
+                        </button>
+                        ${estado}
+                        <div class="solo-operacion flex gap-2">
+                            ${pendiente ? `<button onclick="marcarAsistencia(${parseInt(c.id_cita)}, 'Asistió')" class="px-3 py-2 rounded-lg border-2 border-[#BFE3CD] text-[#2F7D4F] font-bold hover:bg-[#E4F4EA]">✓ Llegó</button>
+                            <button onclick="marcarAsistencia(${parseInt(c.id_cita)}, 'No Asistió')" class="px-3 py-2 rounded-lg border-2 border-[#F2C9D0] text-[#A3263B] font-bold hover:bg-[#FBE9EC]">Faltó</button>` : ''}
+                            ${c.asistencia !== 'No Asistió' ? `<button onclick="cobrarCita(${parseInt(c.id_cita)})" class="px-3 py-2 rounded-lg bg-jade text-white font-bold hover:bg-jade-oscuro">Cobrar</button>` : ''}
+                        </div></li>`;
+                }).join('') + '</ul>';
+            }
+            document.getElementById('cuadricula-calendario').innerHTML = html;
+        }
+        function marcarAsistencia(id, valor) {
+            const fd = new FormData(); fd.append('id_cita', id); fd.append('asistencia', valor);
+            fetch('actualizar_asistencia.php', { method: 'POST', body: fd }).then(r => r.json()).then(d => {
+                if (d.status === 'success') cargarCitas(sucursalActual, ''); else alert('Error: ' + d.message);
+            }).catch(() => alert('Error de red.'));
+        }
+        function cobrarCita(id) {
+            const c = citasGlobales.find(x => x.id_cita == id); if (!c) return;
+            if (sucursalActual !== c.sucursal) {
+                const li = [...document.querySelectorAll('.menu-item')].find(x => x.dataset.sucursal === c.sucursal);
+                cargarCitas(c.sucursal, li ? li.id : '');
+            }
+            abrirRemisiones();
+            document.getElementById('inputFechaRemision').value = c.fecha; cargarDatosRemision();
+        }
 
         // ===== Ausencias =====
         function abrirAusencias() {
@@ -1118,7 +1276,7 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
             }).catch(() => alert('Error de red.'));
         }
 
-        document.addEventListener('DOMContentLoaded', () => { cargarCitas(SUCURSAL_FIJA, SUCURSAL_FIJA ? 'menu-suc-0' : 'menu-todas'); });
+        document.addEventListener('DOMContentLoaded', () => { sucursalActual = SUCURSAL_FIJA; document.querySelectorAll('.vista-btn').forEach(b => b.setAttribute('aria-pressed', b.dataset.vista === vistaActual ? 'true' : 'false')); lunesActual = lunesDe(diaActual); cargarCitas(SUCURSAL_FIJA, SUCURSAL_FIJA ? 'menu-suc-0' : 'menu-todas'); });
     </script>
 </body>
 </html>
