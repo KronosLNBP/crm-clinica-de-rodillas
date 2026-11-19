@@ -1,0 +1,2 @@
+# Los PDFs con datos de pacientes solo se abren con ver_archivo.php (link firmado o sesión del personal)
+Require all denied

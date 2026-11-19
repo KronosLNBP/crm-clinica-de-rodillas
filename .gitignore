@@ -1,0 +1,14 @@
+# Credenciales
+config.php
+.env
+
+# Datos de pacientes (PDFs) — nunca al repositorio
+remisiones_guardadas/*
+!remisiones_guardadas/.htaccess
+carnets_guardados/*
+!carnets_guardados/.htaccess
+
+# Respaldos / dumps con datos reales
+*.sql
+!migracion_v2.sql
+*.log

@@ -1,0 +1,66 @@
+# Deploy por FTP a cPanel cada vez que se hace push a main (o manual desde la pestaña Actions).
+# Secretos requeridos (Settings → Secrets and variables → Actions):
+#   FTP_SERVER, FTP_USERNAME, FTP_PASSWORD, FTP_SERVER_DIR   (ej. /public_html/dash/  ← con diagonal final)
+#   DB_NAME, DB_USER, DB_PASS, APP_SECRET
+# Variable opcional (pestaña "Variables"): BASE_URL  (por defecto https://grupoempresarialdiaz.com.mx/dash)
+name: Deploy FTP
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-ftp
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generar config.php desde los secretos
+        env:
+          DB_HOST: localhost
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASS: ${{ secrets.DB_PASS }}
+          APP_SECRET: ${{ secrets.APP_SECRET }}
+          BASE_URL: ${{ vars.BASE_URL || 'https://grupoempresarialdiaz.com.mx/dash' }}
+        run: |
+          for v in DB_NAME DB_USER DB_PASS APP_SECRET; do
+            if [ -z "${!v}" ]; then echo "::error::Falta el secreto $v"; exit 1; fi
+          done
+          # var_export escapa comillas y caracteres raros de la contraseña
+          php -r '
+            $c = [
+              "db_host" => getenv("DB_HOST"), "db_name" => getenv("DB_NAME"),
+              "db_user" => getenv("DB_USER"), "db_pass" => getenv("DB_PASS"),
+              "base_url" => rtrim(getenv("BASE_URL"), "/"), "app_secret" => getenv("APP_SECRET"),
+            ];
+            file_put_contents("config.php", "<?php\nreturn " . var_export($c, true) . ";\n");
+          '
+          php -l config.php
+
+      - name: Revisar sintaxis PHP
+        run: for f in *.php; do php -l "$f" > /dev/null || exit 1; done
+
+      - name: Subir por FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: ${{ secrets.FTP_SERVER_DIR }}
+          # Nunca borrar en el servidor lo que no esté aquí (PDFs de pacientes)
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/.git*/**
+            .github/**
+            README.md
+            migracion_v2.sql
+            config.example.php
+            remisiones_guardadas/*.pdf
+            carnets_guardados/*.pdf
