@@ -29,7 +29,7 @@ $e = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES);
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen">
-<nav class="bg-[#4361ee] text-white py-4 px-8 shadow-md">
+<nav class="bg-[#0E7C66] text-white py-4 px-8 shadow-md">
     <div class="max-w-6xl mx-auto flex justify-between items-center">
         <h1 class="text-xl font-bold">⚙️ Administración</h1>
         <div class="text-sm"><a href="index.php" class="underline">← Volver a la agenda</a> · <a href="logout_staff.php" class="underline">Salir</a></div>
