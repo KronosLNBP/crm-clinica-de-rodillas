@@ -4,7 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/lib.php';
 
 /** Valida el formulario de cita y devuelve los valores listos para la BD (o responde con error). */
-function datos_cita_desde_post(PDO $pdo, int $idCitaActual = 0): array
+function datos_cita_desde_post(PDO $pdo, array $u, int $idCitaActual = 0): array
 {
     $fecha    = txt($_POST, 'fecha', 10);
     $hora     = txt($_POST, 'hora', 8);
@@ -16,7 +16,7 @@ function datos_cita_desde_post(PDO $pdo, int $idCitaActual = 0): array
     $yaEs     = txt($_POST, 'ya_es_paciente', 2) === 'Si' ? 'Si' : 'No';
     $tipo     = txt($_POST, 'tipo', 100);
     $asistente = txt($_POST, 'asistente', 100);
-    $sucNombre = txt($_POST, 'sucursal', 100);
+    $sucNombre = sucursal_permitida($pdo, $u, txt($_POST, 'sucursal', 100));
 
     if (!fecha_valida($fecha)) error_usuario('La fecha no es válida.');
     if (!hora_valida($hora))   error_usuario('La hora no es válida.');

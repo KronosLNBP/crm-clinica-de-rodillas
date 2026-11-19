@@ -3,11 +3,15 @@ declare(strict_types=1);
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/citas_lib.php';
 
-$u = requiere_staff_api();
+$u = requiere_staff_api(ROLES_OPERACION);
 solo_post();
 
 try {
-    $d = datos_cita_desde_post($pdo);
+    $d = datos_cita_desde_post($pdo, $u);
+    $aviso = aviso_agenda($pdo, $d[':id_sucursal'], $d[':fecha'], $d[':hora'], $d[':es_express'] === 1);
+    if ($aviso && ($_POST['forzar'] ?? '') !== '1') {
+        responder(['status' => 'advertencia', 'message' => $aviso]);
+    }
     $d[':creado_por'] = $u['id'];
 
     $st = $pdo->prepare(

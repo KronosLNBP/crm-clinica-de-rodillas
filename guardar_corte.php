@@ -4,10 +4,10 @@
 declare(strict_types=1);
 require_once __DIR__ . '/auth.php';
 
-$u = requiere_staff_api();
+$u = requiere_staff_api(ROLES_OPERACION);
 solo_post();
 
-$sucursal = txt($_POST, 'sucursal', 100);
+$sucursal = sucursal_permitida($pdo, $u, txt($_POST, 'sucursal', 100));
 $fecha    = txt($_POST, 'fecha', 10);
 $contado  = isset($_POST['efectivo_contado']) && is_numeric($_POST['efectivo_contado']) ? dinero($_POST, 'efectivo_contado') : null;
 $obs      = txt($_POST, 'observaciones', 1000);

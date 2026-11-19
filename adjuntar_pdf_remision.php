@@ -3,7 +3,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/auth.php';
 
-requiere_staff_api();
+requiere_staff_api(ROLES_OPERACION);
 solo_post();
 
 $idRem = (int)($_POST['id_remision'] ?? 0);
@@ -28,7 +28,8 @@ try {
              . "📄 *Descarga tu recibo en PDF aquí:*\n" . url_archivo($ruta) . "\n\n"
              . '¡Gracias por tu preferencia!';
 
-    responder(['status' => 'success', 'wa_link' => link_whatsapp($r['telefono'], $mensaje)]);
+    responder(['status' => 'success', 'wa_link' => link_whatsapp($r['telefono'], $mensaje),
+               'pdf' => 'ver_archivo.php?f=' . rawurlencode($ruta)]);
 } catch (Throwable $e) {
     error_servidor($e);
 }

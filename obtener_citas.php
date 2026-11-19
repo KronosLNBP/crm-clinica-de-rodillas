@@ -3,9 +3,9 @@
 declare(strict_types=1);
 require_once __DIR__ . '/auth.php';
 
-requiere_staff_api();
+$u = requiere_staff_api();
 
-$sucursal = txt($_GET, 'sucursal', 100);
+$sucursal = sucursal_permitida($pdo, $u, txt($_GET, 'sucursal', 100));
 $tipo     = txt($_GET, 'tipo', 100);
 $yaEs     = txt($_GET, 'ya_es_paciente', 2);
 $desde    = txt($_GET, 'desde', 10);

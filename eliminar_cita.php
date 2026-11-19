@@ -2,12 +2,14 @@
 declare(strict_types=1);
 require_once __DIR__ . '/auth.php';
 
-$u = requiere_staff_api();
+$u = requiere_staff_api(ROLES_OPERACION);
 solo_post();
 
 $idCita = (int)($_POST['id_cita'] ?? 0);
 $motivo = txt($_POST, 'motivo', 255);
 if ($idCita <= 0) error_usuario('ID de cita no proporcionado.');
+
+verificar_cita_sucursal($pdo, $u, $idCita);
 
 try {
     $st = $pdo->prepare('SELECT * FROM citas WHERE id_cita = ?');

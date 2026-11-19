@@ -2,7 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/auth.php';
 
-requiere_staff_api();
+$u = requiere_staff_api(ROLES_OPERACION);
 solo_post();
 
 $idCita  = (int)($_POST['id_cita'] ?? 0);
@@ -10,6 +10,8 @@ $tomadas = max(0, min(100, (int)($_POST['sesiones_tomadas'] ?? 0)));
 $totales = max(1, min(100, (int)($_POST['sesiones_totales'] ?? 10)));
 if ($idCita <= 0) error_usuario('Falta la cita.');
 $pdf = decodificar_pdf((string)($_POST['pdf_data'] ?? ''));
+
+verificar_cita_sucursal($pdo, $u, $idCita);
 
 try {
     $st = $pdo->prepare('SELECT paciente, telefono, id_paciente FROM citas WHERE id_cita = ?');

@@ -4,16 +4,16 @@
 declare(strict_types=1);
 require_once __DIR__ . '/auth.php';
 
-requiere_staff_api();
+$u = requiere_staff_api();
 
-$sucursal = txt($_GET, 'sucursal', 100);
+$sucursal = sucursal_permitida($pdo, $u, txt($_GET, 'sucursal', 100));
 $fecha    = txt($_GET, 'fecha', 10);
 if ($sucursal === '' || !fecha_valida($fecha)) error_usuario('Sucursal o fecha no válidas.');
 
 try {
     $st = $pdo->prepare(
         "SELECT c.id_cita, c.hora, c.paciente, c.telefono, c.sucursal, c.tipo_tratamiento, c.asistencia,
-                r.id_remision, r.folio, r.servicio, r.efectivo, r.credito, r.debito, r.transferencia, r.total
+                r.id_remision, r.folio, r.servicio, r.efectivo, r.credito, r.debito, r.transferencia, r.total, r.ruta_archivo
            FROM citas c
            LEFT JOIN (SELECT id_cita, MAX(id_remision) AS id_rem
                         FROM remisiones_clientes WHERE estado = 'Vigente' GROUP BY id_cita) ult

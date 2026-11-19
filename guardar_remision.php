@@ -5,7 +5,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/auth.php';
 
-$u = requiere_staff_api();
+$u = requiere_staff_api(ROLES_OPERACION);
 solo_post();
 
 $idCita   = (int)($_POST['id_cita'] ?? 0);
@@ -22,6 +22,8 @@ if ($idCita <= 0) error_usuario('Falta la cita.');
 if (mb_strlen($servicio) < 3 || preg_match('/^[\d.,$\s]+$/', $servicio)) error_usuario('Describe el servicio (no el precio).');
 if ($total <= 0) error_usuario('Captura el monto cobrado.');
 if (!fecha_valida($fecha)) error_usuario('Fecha no válida.');
+
+verificar_cita_sucursal($pdo, $u, $idCita);
 
 try {
     // Los datos del paciente salen de la BD, no del navegador
@@ -57,6 +59,8 @@ try {
         $efectivo, $credito + $debito, $credito, $debito, $transf, $total, $fecha, $u['id'],
     ]);
     $idRem = (int)$pdo->lastInsertId();
+    // Si pagó, asistió: no hay que marcarlo a mano
+    $pdo->prepare("UPDATE citas SET asistencia = 'Asistió' WHERE id_cita = ?")->execute([$idCita]);
     bitacora($pdo, $u['id'], 'remisiones_clientes', $idRem, 'crear', null, ['folio' => $folio, 'total' => $total]);
     $pdo->commit();
 

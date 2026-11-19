@@ -10,5 +10,5 @@ carnets_guardados/*
 
 # Respaldos / dumps con datos reales
 *.sql
-!migracion_v2.sql
+!migracion_*.sql
 *.log

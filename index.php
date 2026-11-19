@@ -1,6 +1,14 @@
 <?php
 require_once __DIR__ . '/auth.php';
 $usuario = requiere_staff_pagina();   // sin sesión → login_staff.php
+$rol = $usuario['rol'];
+$sucUsuario = sucursal_del_usuario($pdo, $usuario);   // null = puede ver todas
+$listaSucursales = $sucUsuario
+    ? [$sucUsuario['nombre_sucursal']]
+    : $pdo->query('SELECT nombre_sucursal FROM sucursales WHERE activo = 1 ORDER BY id_sucursal')->fetchAll(PDO::FETCH_COLUMN);
+$h = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES);
+$opcionesSucursal = implode('', array_map(fn($x) => '<option value="' . $h($x) . '">' . $h($x) . '</option>', $listaSucursales));
+$esClinico = in_array($rol, ROLES_CLINICOS, true);
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -17,6 +25,7 @@ $usuario = requiere_staff_pagina();   // sin sesión → login_staff.php
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         .filtro-activo { border-color: black !important; color: black !important; }
         .menu-activo { text-decoration: underline; font-weight: bold; text-underline-offset: 4px; }
+        .rol-contabilidad .solo-operacion { display: none !important; } /* contabilidad: solo consulta */
         
         /* REGLAS DE IMPRESIÓN CORREGIDAS */
         @media print {
@@ -34,18 +43,15 @@ $usuario = requiere_staff_pagina();   // sin sesión → login_staff.php
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gray-100 min-h-screen rol-<?= $h($rol) ?>">
 
     <nav class="bg-[#4361ee] text-white pt-4 pb-4 px-8 shadow-md">
         <div class="max-w-6xl mx-auto">
-            <div class="flex justify-between items-center mb-4"><h1 class="text-xl font-bold">Clínica de rodillas</h1><div class="text-sm">👤 <?= htmlspecialchars($usuario['nombre']) ?> · <a href="logout_staff.php" class="underline hover:text-gray-200">Salir</a></div></div>
+            <div class="flex justify-between items-center mb-4"><h1 class="text-xl font-bold">Clínica de rodillas</h1><div class="text-sm">👤 <?= htmlspecialchars($usuario['nombre']) ?> <?php if ($rol === 'admin'): ?>· <a href="admin.php" class="underline hover:text-gray-200">⚙️ Admin</a> <?php endif; ?>· <a href="logout_staff.php" class="underline hover:text-gray-200">Salir</a></div></div>
             <ul class="flex flex-wrap gap-x-8 gap-y-2 text-sm font-medium cursor-pointer">
-                <li id="menu-del-valle" onclick="cargarCitas('Del Valle', 'menu-del-valle')" class="menu-item hover:text-gray-200">Del Valle</li>
-                <li id="menu-tepeyac" onclick="cargarCitas('Tepeyac', 'menu-tepeyac')" class="menu-item hover:text-gray-200">Tepeyac</li>
-                <li id="menu-balbuena" onclick="cargarCitas('Balbuena', 'menu-balbuena')" class="menu-item hover:text-gray-200">Balbuena</li>
-                <li id="menu-pachuca" onclick="cargarCitas('Pachuca', 'menu-pachuca')" class="menu-item hover:text-gray-200">Pachuca</li>
-                <li id="menu-puebla" onclick="cargarCitas('Puebla', 'menu-puebla')" class="menu-item hover:text-gray-200">Puebla</li>
-                <li id="menu-todas" onclick="cargarCitas('', 'menu-todas')" class="menu-item hover:text-gray-200 menu-activo">Ver Todas</li>
+                <?php foreach ($listaSucursales as $i => $suc): ?><li id="menu-suc-<?= $i ?>" onclick="cargarCitas(<?= $h(json_encode($suc, JSON_UNESCAPED_UNICODE)) ?>, 'menu-suc-<?= $i ?>')" class="menu-item hover:text-gray-200"><?= $h($suc) ?></li>
+                <?php endforeach; ?>
+                <?php if (!$sucUsuario): ?><li id="menu-todas" onclick="cargarCitas('', 'menu-todas')" class="menu-item hover:text-gray-200 menu-activo">Ver Todas</li><?php endif; ?>
             </ul>
         </div>
     </nav>
@@ -68,11 +74,12 @@ $usuario = requiere_staff_pagina();   // sin sesión → login_staff.php
         <div class="flex justify-center items-center gap-3 mb-6 flex-wrap">
             <h2 id="titulo-calendario" class="text-2xl font-bold text-[#1e3a8a] mr-2">Agenda - General</h2>
             <button id="btn-toggle-vista" onclick="toggleVista()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md shadow-md text-sm font-bold transition-colors">🗓️ Cambiar a Mensual</button>
-            <button onclick="abrirModalAsistencias()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md shadow-md text-sm font-bold flex items-center gap-2 transition-colors">📊 Ver Asistencias</button>
-            <button onclick="abrirRemisiones()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md shadow-md text-sm font-bold flex items-center gap-2 transition-colors">🧾 Remisiones</button>
-            <button onclick="abrirCitaExpress()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md shadow-md text-sm font-bold flex items-center gap-2 transition-colors ml-2">⚡ Cita en el Momento</button>
+            <button onclick="abrirModalAsistencias()" class="solo-operacion bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md shadow-md text-sm font-bold flex items-center gap-2 transition-colors">📊 Ver Asistencias</button>
+            <button onclick="abrirRemisiones()" class="solo-operacion bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md shadow-md text-sm font-bold flex items-center gap-2 transition-colors">🧾 Remisiones</button>
+            <button onclick="abrirCitaExpress()" class="solo-operacion bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md shadow-md text-sm font-bold flex items-center gap-2 transition-colors ml-2">⚡ Cita en el Momento</button>
             <button onclick="abrirDirectorio()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md shadow-md text-sm font-bold flex items-center gap-2 transition-colors ml-2">📋 Directorio</button>
             <button onclick="abrirHistorialCortes()" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md shadow-md text-sm font-bold flex items-center gap-2 transition-colors ml-2">📈 Historial de Cortes</button>
+            <button onclick="abrirAusencias()" class="solo-operacion bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md shadow-md text-sm font-bold flex items-center gap-2 transition-colors ml-2">🚫 Ausencias</button>
         </div>
         
         <div class="flex justify-between items-center mb-6">
@@ -106,14 +113,7 @@ $usuario = requiere_staff_pagina();   // sin sesión → login_staff.php
                 <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6 bg-white p-4 rounded-lg border border-gray-200 shadow-sm items-end no-print">
                     <div>
                         <label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Sucursal</label>
-                        <select id="filtroHC_Sucursal" onchange="cargarHistorialCortes()" class="w-full border border-gray-300 rounded p-2 text-sm focus:ring-teal-500 outline-none font-medium">
-                            <option value="">Todas las Sucursales</option>
-                            <option value="Del Valle">Del Valle</option>
-                            <option value="Tepeyac">Tepeyac</option>
-                            <option value="Pachuca">Pachuca</option>
-                            <option value="Puebla">Puebla</option>
-                            <option value="Balbuena">Balbuena</option>
-                        </select>
+                        <select id="filtroHC_Sucursal" onchange="cargarHistorialCortes()" class="w-full border border-gray-300 rounded p-2 text-sm focus:ring-teal-500 outline-none font-medium"><?php if (!$sucUsuario): ?><option value="">Todas las Sucursales</option><?php endif; ?><?= $opcionesSucursal ?></select>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Período Rápido</label>
@@ -163,6 +163,7 @@ $usuario = requiere_staff_pagina();   // sin sesión → login_staff.php
                     </div>
                 </div>
 
+                <p class="text-xs text-gray-500 mb-2 no-print">👆 Haz clic en un corte para ver cada cobro y su recibo. Ya no hace falta imprimir ni mandar el corte: quien revisa puede consultarlo aquí.</p>
                 <!-- Tabla de Resultados de Cortes -->
                 <div class="flex-1 overflow-auto border border-gray-200 rounded-lg shadow-sm bg-white print:overflow-visible print:border-none print:shadow-none">
                     <table class="w-full text-sm text-left text-gray-700">
@@ -330,6 +331,51 @@ $usuario = requiere_staff_pagina();   // sin sesión → login_staff.php
                 </div>
                 <h3 class="font-bold text-gray-700 border-b pb-2 mb-4 text-sm uppercase tracking-wider">Historial de Tratamiento</h3>
                 <div class="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm"><table class="w-full text-sm text-left text-gray-700"><thead class="text-xs text-gray-500 uppercase bg-gray-100 border-b border-gray-200"><tr><th class="px-4 py-3">Fecha y Hora</th><th class="px-4 py-3">Tratamiento</th><th class="px-4 py-3">Sucursal</th><th class="px-4 py-3 text-center">Asistencia</th></tr></thead><tbody id="perfil-historial-body" class="divide-y divide-gray-100"></tbody></table></div>
+                <?php if ($esClinico): ?>
+                <h3 class="font-bold text-gray-700 border-b pb-2 mb-4 mt-6 text-sm uppercase tracking-wider">🩺 Notas del médico <span class="normal-case font-normal text-gray-400">(solo médicos/terapeutas)</span></h3>
+                <form id="formNota" onsubmit="guardarNota(event)" class="bg-white border border-gray-200 rounded-lg p-4 mb-4 grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <select name="rodilla" class="border rounded p-2 text-sm"><option value="">Rodilla…</option><option>Derecha</option><option>Izquierda</option><option>Ambas</option></select>
+                    <input name="diagnostico" maxlength="255" placeholder="Diagnóstico" class="md:col-span-2 border rounded p-2 text-sm">
+                    <input name="dolor_eva" type="number" min="0" max="10" placeholder="Dolor 0-10" class="border rounded p-2 text-sm">
+                    <textarea name="notas" rows="2" maxlength="5000" placeholder="Evolución, indicaciones, plan de tratamiento…" class="md:col-span-4 border rounded p-2 text-sm"></textarea>
+                    <button class="md:col-span-4 bg-blue-700 hover:bg-blue-800 text-white font-bold py-2 rounded text-sm">Guardar nota</button>
+                </form>
+                <div id="lista-notas" class="space-y-2"></div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL AUSENCIAS / BLOQUEOS DE AGENDA -->
+    <div id="modalAusencias" class="fixed inset-0 bg-black bg-opacity-60 hidden flex justify-center items-center z-[70] p-4 no-print">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div class="flex justify-between items-center p-4 border-b bg-red-50"><h2 class="text-xl font-black text-red-800">🚫 Ausencias y bloqueos de agenda</h2><button onclick="document.getElementById('modalAusencias').classList.add('hidden')" class="text-gray-500 hover:text-red-500 text-3xl font-bold leading-none">&times;</button></div>
+            <div class="p-6 overflow-y-auto bg-gray-50">
+                <p class="text-sm text-gray-600 mb-4">Registra con anticipación cuando un médico no estará (vacaciones, permiso, congreso) o saldrá temprano. Esos días/horas se ven en rojo en la agenda y el sistema avisa antes de agendar ahí. Deja las horas vacías para bloquear el día completo.</p>
+                <form id="formAusencia" onsubmit="guardarAusencia(event)" class="bg-white border border-gray-200 rounded-lg p-4 grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
+                    <label class="col-span-2 text-xs font-bold text-gray-500 uppercase">Sucursal<select name="sucursal" required class="w-full border rounded p-2 text-sm font-normal normal-case"><?= $opcionesSucursal ?></select></label>
+                    <label class="col-span-2 text-xs font-bold text-gray-500 uppercase">Médico (opcional)<input name="medico" maxlength="120" placeholder="Ej. Dr. Palma" class="w-full border rounded p-2 text-sm font-normal normal-case"></label>
+                    <label class="col-span-2 text-xs font-bold text-gray-500 uppercase">Motivo<input name="motivo" list="motivosAusencia" required maxlength="150" class="w-full border rounded p-2 text-sm font-normal normal-case"></label>
+                    <datalist id="motivosAusencia"><option>Vacaciones</option><option>Permiso</option><option>Emergencia</option><option>Sale temprano</option><option>Llega tarde</option><option>Congreso / curso</option><option>Día festivo</option></datalist>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Desde<input name="fecha_inicio" type="date" required class="w-full border rounded p-2 text-sm"></label>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Hasta<input name="fecha_fin" type="date" class="w-full border rounded p-2 text-sm"></label>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Hora inicio<input name="hora_inicio" type="time" class="w-full border rounded p-2 text-sm"></label>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Hora fin<input name="hora_fin" type="time" class="w-full border rounded p-2 text-sm"></label>
+                    <div class="col-span-2 flex items-end"><button class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded text-sm">Registrar ausencia</button></div>
+                </form>
+                <h3 class="font-bold text-gray-700 mb-2 text-sm uppercase">Próximas ausencias</h3>
+                <div id="lista-ausencias" class="space-y-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DETALLE DE CORTE -->
+    <div id="modalDetalleCorte" class="fixed inset-0 bg-black bg-opacity-60 hidden flex justify-center items-center z-[80] p-4 no-print">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div class="flex justify-between items-center p-4 border-b bg-teal-50"><h2 id="tituloDetalleCorte" class="text-xl font-black text-teal-800">Detalle del corte</h2><button onclick="document.getElementById('modalDetalleCorte').classList.add('hidden')" class="text-gray-500 hover:text-red-500 text-3xl font-bold leading-none">&times;</button></div>
+            <div class="p-6 overflow-y-auto">
+                <div id="detalle-corte-info" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 text-sm"></div>
+                <table class="w-full text-sm text-left"><thead class="text-xs uppercase text-gray-500 bg-gray-100"><tr><th class="px-3 py-2">Folio</th><th class="px-3 py-2">Paciente</th><th class="px-3 py-2">Servicio</th><th class="px-3 py-2 text-right">Efectivo</th><th class="px-3 py-2 text-right">Tarjeta</th><th class="px-3 py-2 text-right">Transf.</th><th class="px-3 py-2 text-right">Total</th><th class="px-3 py-2">Cobró</th><th class="px-3 py-2">Recibo</th></tr></thead><tbody id="detalle-corte-body" class="divide-y"></tbody></table>
             </div>
         </div>
     </div>
@@ -347,6 +393,7 @@ $usuario = requiere_staff_pagina();   // sin sesión → login_staff.php
                     <h3 class="font-bold text-gray-700 border-b pb-2 mb-4 text-sm uppercase tracking-wider">Progreso</h3>
                     <div class="flex gap-4 mb-6"><div class="w-1/2"><label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Total</label><input type="number" id="inputTotalesCarnet" value="10" min="1" onchange="dibujarCarnetVisual()" class="w-full border border-gray-300 rounded-md p-2 focus:ring-purple-500 outline-none text-center font-bold"></div><div class="w-1/2"><label class="block text-xs font-bold text-purple-700 mb-1 uppercase">Tomadas</label><input type="number" id="inputTomadasCarnet" value="0" min="0" onchange="dibujarCarnetVisual()" class="w-full border border-purple-300 rounded-md p-2 focus:ring-purple-500 outline-none bg-purple-50 text-center font-bold text-purple-700"></div></div>
                     <button id="btnGenerarCarnet" onclick="generarEnviarCarnet()" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-colors flex items-center justify-center gap-2">📲 Generar y Enviar</button>
+                    <button type="button" onclick="imprimirCarnet()" class="w-full mt-2 bg-gray-700 hover:bg-gray-800 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-colors flex items-center justify-center gap-2">🖨️ Imprimir carnet</button>
                 </div>
                 <div class="w-full md:w-2/3 flex justify-center items-start">
                     <div id="carnet-render" style="width: 100%; background: white; border: 1px solid #ccc; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
@@ -372,7 +419,7 @@ $usuario = requiere_staff_pagina();   // sin sesión → login_staff.php
                 <div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700">Estado Base</label><select name="estado" id="inputEstado" class="mt-1 block w-full border border-gray-300 rounded-md p-2 bg-white"><option value="Agendado">Agendado</option><option value="Confirmada">Confirmada</option><option value="Express">Cita en el Momento ⚡</option></select></div><div><label class="block text-sm font-medium text-gray-700">Edad</label><input type="number" name="edad" id="inputEdad" class="mt-1 block w-full border border-gray-300 rounded-md p-2"></div></div>
                 <div><label class="block text-sm font-medium text-gray-700">Paciente</label><input type="text" name="paciente" id="inputPaciente" required class="mt-1 block w-full border border-gray-300 rounded-md p-2"></div>
                 <div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700">Teléfono</label><input type="tel" name="telefono" id="inputTelefono" required class="mt-1 block w-full border border-gray-300 rounded-md p-2"></div><div><label class="block text-sm font-medium text-gray-700">¿Ya es paciente?</label><select name="ya_es_paciente" id="inputYaPaciente" class="mt-1 block w-full border border-gray-300 rounded-md p-2"><option value="No">No</option><option value="Si">Sí</option></select></div></div>
-                <div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700">Tipo (Tratamiento)</label><select name="tipo" id="inputTipo" class="mt-1 block w-full border border-gray-300 rounded-md p-2"><option value="Sports medicine">Sports medicine</option><option value="Clínica de rodillas">Clínica de rodillas</option><option value="Cámara Hiperbárica">Cámara Hiperbárica</option></select></div><div><label class="block text-sm font-medium text-gray-700">Sucursal</label><select name="sucursal" id="inputSucursal" class="mt-1 block w-full border border-gray-300 rounded-md p-2"><option value="Del Valle">Del Valle</option><option value="Tepeyac">Tepeyac</option><option value="Pachuca">Pachuca</option><option value="Puebla">Puebla</option><option value="Balbuena">Balbuena</option></select></div></div>
+                <div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700">Tipo (Tratamiento)</label><select name="tipo" id="inputTipo" class="mt-1 block w-full border border-gray-300 rounded-md p-2"><option value="Sports medicine">Sports medicine</option><option value="Clínica de rodillas">Clínica de rodillas</option><option value="Cámara Hiperbárica">Cámara Hiperbárica</option></select></div><div><label class="block text-sm font-medium text-gray-700">Sucursal</label><select name="sucursal" id="inputSucursal" class="mt-1 block w-full border border-gray-300 rounded-md p-2"><?= $opcionesSucursal ?></select></div></div>
                 <div><label class="block text-sm font-medium text-gray-700">Asistente</label><input type="text" name="asistente" id="inputAsistente" class="mt-1 block w-full border border-gray-300 rounded-md p-2"></div>
                 
                 <div id="botonesEdicion" class="grid grid-cols-2 gap-2 mt-4 w-full">
@@ -403,11 +450,11 @@ $usuario = requiere_staff_pagina();   // sin sesión → login_staff.php
         function esc(v) { return String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])); }
         const fmtMXN = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
 
+        const SUCURSAL_FIJA = <?= json_encode($sucUsuario['nombre_sucursal'] ?? '', JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?>;
+        const PUEDE_NOTAS = <?= $esClinico ? 'true' : 'false' ?>;
         let sucursalActual = ''; let tipoTratamientoActual = ''; let yaPacienteActual = ''; let citasGlobales = []; let vistaActual = 'semana';
         const nombresMesesCorto = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
         const nombresMesesCompletos = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-        const diasNombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-        const horariosBase = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00"];
 
         let lunesActual = new Date(); const diaSemana = lunesActual.getDay(); const diff = lunesActual.getDate() - diaSemana + (diaSemana === 0 ? -6 : 1);
         lunesActual.setDate(diff); let mesActualDate = new Date(); 
@@ -472,7 +519,7 @@ $usuario = requiere_staff_pagina();   // sin sesión → login_staff.php
                     if (data.data.length === 0) { html = `<tr><td colspan="8" class="text-center py-8 text-gray-500 font-bold bg-white">No hay cortes de caja guardados en este período.</td></tr>`; } 
                     else {
                         data.data.forEach(c => {
-                            html += `<tr class="hover:bg-gray-50 transition border-b border-gray-100"><td class="px-4 py-3 font-mono text-xs text-gray-500">#${c.id_corte}</td><td class="px-4 py-3 font-bold text-gray-800">${esc(c.fecha)}</td><td class="px-4 py-3 text-gray-600 font-medium">${esc(c.sucursal)}</td><td class="px-4 py-3 text-center font-bold text-blue-600">${c.total_pacientes}</td><td class="px-4 py-3 text-right text-gray-600">${fmt.format(c.efectivo)}</td><td class="px-4 py-3 text-right text-gray-600">${fmt.format(parseFloat(c.credito) + parseFloat(c.debito))}</td><td class="px-4 py-3 text-right text-gray-600">${fmt.format(c.transferencia)}</td><td class="px-4 py-3 text-right font-black text-blue-800 print:text-black">${fmt.format(c.total_general)}</td></tr>`;
+                            html += `<tr onclick="abrirDetalleCorte(${parseInt(c.id_corte)})" title="Ver detalle" class="hover:bg-teal-50 cursor-pointer transition border-b border-gray-100"><td class="px-4 py-3 font-mono text-xs text-teal-700 underline">#${c.id_corte}</td><td class="px-4 py-3 font-bold text-gray-800">${esc(c.fecha)}</td><td class="px-4 py-3 text-gray-600 font-medium">${esc(c.sucursal)}</td><td class="px-4 py-3 text-center font-bold text-blue-600">${c.total_pacientes}</td><td class="px-4 py-3 text-right text-gray-600">${fmt.format(c.efectivo)}</td><td class="px-4 py-3 text-right text-gray-600">${fmt.format(parseFloat(c.credito) + parseFloat(c.debito))}</td><td class="px-4 py-3 text-right text-gray-600">${fmt.format(c.transferencia)}</td><td class="px-4 py-3 text-right font-black text-blue-800 print:text-black">${fmt.format(c.total_general)}</td></tr>`;
                         });
                     }
                     tbody.innerHTML = html;
@@ -567,7 +614,7 @@ $usuario = requiere_staff_pagina();   // sin sesión → login_staff.php
 
         function abrirPerfilPaciente() {
             const paciente = document.getElementById('inputPaciente').value; const telefono = document.getElementById('inputTelefono').value; const idCita = document.getElementById('inputIdCita').value; if(!paciente || !idCita) return;
-            document.getElementById('perfil-nombre').innerText = "Cargando..."; document.getElementById('modalPerfil').classList.remove('hidden');
+            document.getElementById('perfil-nombre').innerText = "Cargando..."; document.getElementById('modalPerfil').classList.remove('hidden'); if (PUEDE_NOTAS) cargarNotas();
             fetch(`obtener_perfil_paciente.php?id_cita=${encodeURIComponent(idCita)}`).then(res => res.json()).then(data => {
                 if(data.status === 'success') {
                     const info = data.data; document.getElementById('perfil-nombre').innerText = info.paciente; document.getElementById('perfil-telefono').innerText = "📞 " + (info.telefono || telefono || 'Sin registrar'); document.getElementById('perfil-folio').innerText = info.folio; document.getElementById('perfil-total-citas').innerText = info.total_citas; document.getElementById('perfil-asistencias').innerText = info.asistencias; document.getElementById('perfil-faltas').innerText = info.faltas;
@@ -646,7 +693,7 @@ $usuario = requiere_staff_pagina();   // sin sesión → login_staff.php
                             + `<td class="px-3 py-1 border-r border-gray-300 font-bold text-gray-900 truncate nombre-paciente">${esc(c.paciente)}</td>`
                             + `<td class="px-2 py-1 border-r border-gray-300"><input type="text" maxlength="150" ${emitida ? `value="${esc(c.servicio)}"` : ''} ${ro} class="input-servicio border-0 w-full text-sm text-gray-600 bg-transparent outline-none focus:ring-1 focus:ring-emerald-300" placeholder="Escribe el servicio..."></td>`
                             + celdaNum('input-efectivo', 'efectivo') + celdaNum('input-credito', 'credito') + celdaNum('input-debito', 'debito') + celdaNum('input-transferencia', 'transferencia')
-                            + `<td class="px-2 py-1 text-center no-print"><button onclick="emitirReciboCliente(${parseInt(c.id_cita)})" class="${emitida ? 'bg-gray-400 hover:bg-gray-500' : 'bg-emerald-500 hover:bg-emerald-600'} text-white px-3 py-1.5 rounded shadow text-xs font-bold transition-colors w-full">${emitida ? '➕ Otro cobro' : '📤 Emitir PDF'}</button></td></tr>`;
+                            + `<td class="px-2 py-1 text-center no-print"><button onclick="emitirReciboCliente(${parseInt(c.id_cita)})" class="${emitida ? 'bg-gray-400 hover:bg-gray-500' : 'bg-emerald-500 hover:bg-emerald-600'} text-white px-3 py-1.5 rounded shadow text-xs font-bold transition-colors w-full">${emitida ? '➕ Otro cobro' : '📤 Emitir PDF'}</button>${emitida && c.ruta_archivo ? `<a href="ver_archivo.php?f=${encodeURIComponent(c.ruta_archivo)}" target="_blank" class="block mt-1 text-xs text-blue-700 underline">🖨️ Ver / imprimir</a>` : ''}</td></tr>`;
                     }).join('');
                 }
                 document.getElementById('tot-pacientes').innerText = remisionesDia.length;
@@ -706,7 +753,9 @@ $usuario = requiere_staff_pagina();   // sin sesión → login_staff.php
                     return fetch('adjuntar_pdf_remision.php', { method: 'POST', body: fd2 }).then(r => r.json());
                 }).then(d2 => {
                     if (d2.status !== 'success') { alert(`El cobro quedó registrado con folio ${data.folio}, pero el PDF no se guardó: ${d2.message}`); }
-                    else if (confirm(`✅ Recibo guardado (Folio: ${data.folio}).\n¿Enviarlo por WhatsApp al paciente?`)) { window.open(d2.wa_link, '_blank'); }
+                    else if (confirm(`✅ Recibo guardado (Folio: ${data.folio}). La asistencia quedó marcada automáticamente.\n\nAceptar = enviarlo por WhatsApp\nCancelar = abrirlo para imprimir`)) { window.open(d2.wa_link, '_blank'); }
+                    else { window.open(d2.pdf, '_blank'); }
+                    cargarCitas(sucursalActual, '');
                     cargarDatosRemision();
                 });
             }).catch(err => {
@@ -740,6 +789,28 @@ $usuario = requiere_staff_pagina();   // sin sesión → login_staff.php
         function cambiarRango(direccion) { if (vistaActual === 'semana') { lunesActual.setDate(lunesActual.getDate() + (direccion * 7)); } else { mesActualDate.setMonth(mesActualDate.getMonth() + direccion); } actualizarCuadricula(); cargarCitas(sucursalActual, ''); }
         function actualizarCuadricula() { if (vistaActual === 'semana') generarCuadriculaSemanal(); else generarCuadriculaMensual(); }
 
+        // ===== Horarios por sucursal y ausencias =====
+        let configAgenda = { sucursales: [], bloqueos: [] };
+        let gridSemana = { ini: 540, fin: 1050, paso: 30 };
+        const DIAS_LARGO = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+        const aMin = (hh) => { const [a, b] = hh.split(':').map(Number); return a * 60 + b; };
+        const aHora = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+        function sucursalesVisibles() { return configAgenda.sucursales.filter(x => !sucursalActual || x.nombre_sucursal === sucursalActual); }
+        // Horario del día (en minutos) uniendo las sucursales visibles; null si ninguna abre
+        function horarioDia(dow) {
+            const sucs = sucursalesVisibles();
+            if (!sucs.some(x => Object.keys(x.horarios || {}).length)) return dow === 0 ? null : { ini: 540, fin: 1050 }; // sin configurar: L-S 9:00-17:30
+            let ini = null, fin = null;
+            sucs.forEach(x => { const hh = (x.horarios || {})[dow]; if (hh) { ini = ini === null ? aMin(hh.ini) : Math.min(ini, aMin(hh.ini)); fin = fin === null ? aMin(hh.fin) : Math.max(fin, aMin(hh.fin)); } });
+            return ini === null ? null : { ini, fin };
+        }
+        function intervaloActual() { const v = sucursalesVisibles().map(x => parseInt(x.intervalo_min) || 30); return v.length ? Math.min(...v) : 30; }
+        function bloqueosDe(fechaStr, horaStr = null) {
+            return configAgenda.bloqueos.filter(b => (!sucursalActual || b.sucursal === sucursalActual) && fechaStr >= b.fecha_inicio && fechaStr <= b.fecha_fin
+                && (horaStr === null || !b.hora_inicio || (horaStr >= b.hora_inicio && horaStr < b.hora_fin)));
+        }
+        const textoBloqueo = (b) => `${b.medico ? b.medico + ': ' : ''}${b.motivo}${b.hora_inicio ? ` (${b.hora_inicio}–${b.hora_fin})` : ''}${sucursalActual ? '' : ` [${b.sucursal}]`}`;
+
         function generarCuadriculaMensual() {
             const mes = mesActualDate.getMonth(); const anio = mesActualDate.getFullYear(); document.getElementById('texto-rango').innerText = `${nombresMesesCompletos[mes]} ${anio}`;
             const primerDiaSemana = new Date(anio, mes, 1).getDay(); const diasEnMes = new Date(anio, mes + 1, 0).getDate();
@@ -748,25 +819,45 @@ $usuario = requiere_staff_pagina();   // sin sesión → login_staff.php
             for (let i = 0; i < primerDiaSemana; i++) { html += `<div class="border rounded h-32 bg-gray-50 opacity-50"></div>`; }
             for (let i = 1; i <= diasEnMes; i++) {
                 const fechaStr = `${anio}-${(mes + 1).toString().padStart(2, '0')}-${i.toString().padStart(2, '0')}`;
-                html += `<div class="border border-gray-300 rounded h-32 flex flex-col bg-white hover:border-blue-400 transition-colors overflow-hidden shadow-sm"><div class="bg-gray-50 border-b border-gray-200 px-2 py-1 flex justify-between items-center"><span class="font-bold text-gray-700 text-sm">${i}</span><button onclick="abrirModalNueva('${fechaStr}', '09:00')" class="bg-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white rounded w-6 h-6 flex items-center justify-center font-bold text-lg leading-none transition-colors" title="Agendar Cita">+</button></div><div id="celda-mes-${fechaStr}" class="flex-1 overflow-y-auto p-1 space-y-1 bg-white"></div></div>`;
+                const hd = horarioDia(new Date(anio, mes, i).getDay()); const bl = bloqueosDe(fechaStr);
+                const avisos = bl.map(b => `<div class="text-[9px] leading-tight bg-red-100 text-red-700 font-bold rounded px-1 truncate" title="${esc(textoBloqueo(b))}">🚫 ${esc(textoBloqueo(b))}</div>`).join('');
+                const boton = hd ? `<button onclick="abrirModalNueva('${fechaStr}', '${aHora(hd.ini)}')" class="solo-operacion bg-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white rounded w-6 h-6 flex items-center justify-center font-bold text-lg leading-none transition-colors" title="Agendar Cita">+</button>` : '<span class="text-[10px] text-gray-400">Cerrado</span>';
+                html += `<div class="border border-gray-300 rounded h-32 flex flex-col ${hd ? 'bg-white hover:border-blue-400' : 'bg-gray-100'} transition-colors overflow-hidden shadow-sm"><div class="${bl.length ? 'bg-red-50' : 'bg-gray-50'} border-b border-gray-200 px-2 py-1 flex justify-between items-center"><span class="font-bold text-gray-700 text-sm">${i}</span>${boton}</div><div id="celda-mes-${fechaStr}" class="flex-1 overflow-y-auto p-1 space-y-1">${avisos}</div></div>`;
             }
             html += '</div>'; document.getElementById('cuadricula-calendario').innerHTML = html;
         }
 
         function generarCuadriculaSemanal() {
-            const fechasSemana = []; for (let i = 0; i < 6; i++) { let d = new Date(lunesActual); d.setDate(lunesActual.getDate() + i); fechasSemana.push(d); }
-            document.getElementById('texto-rango').innerText = `Semana: ${fechasSemana[0].getDate()} ${nombresMesesCorto[fechasSemana[0].getMonth()]} al ${fechasSemana[5].getDate()} ${nombresMesesCorto[fechasSemana[5].getMonth()]} ${fechasSemana[0].getFullYear()}`;
-            let html = '<div class="grid grid-cols-7 divide-x divide-y border-b border-gray-300"><div class="bg-[#007bff] text-white font-bold p-2 flex items-center justify-center text-sm">Hora</div>';
-            fechasSemana.forEach((fecha, index) => { html += `<div class="bg-[#007bff] text-white p-2 text-center flex flex-col justify-center"><span class="font-bold text-sm">${diasNombres[index]}</span><span class="text-xs text-blue-100">${fecha.getDate()} ${nombresMesesCorto[fecha.getMonth()]}</span></div>`; }); html += '</div>';
-            horariosBase.forEach(hora => {
-                html += `<div class="grid grid-cols-7 divide-x divide-y border-b border-gray-200"><div class="bg-gray-100 text-gray-700 font-bold p-1 flex items-center justify-center text-xs w-full">${hora}</div>`;
-                fechasSemana.forEach(fecha => {
-                    const fechaStr = formatearFechaISO(fecha);
-                    html += `<div id="celda-sem-${fechaStr}-${hora}" class="bg-white min-h-[4rem] p-1 cursor-pointer hover:bg-blue-50 transition-colors flex flex-col gap-1 relative group" onclick="abrirModalNueva('${fechaStr}', '${hora}')"><div class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 bg-blue-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold z-10 transition-opacity" title="Agregar">+</div></div>`;
+            const dias = []; for (let i = 0; i < 7; i++) { const d = new Date(lunesActual); d.setDate(lunesActual.getDate() + i); dias.push(d); }
+            document.getElementById('texto-rango').innerText = `Semana: ${dias[0].getDate()} ${nombresMesesCorto[dias[0].getMonth()]} al ${dias[6].getDate()} ${nombresMesesCorto[dias[6].getMonth()]} ${dias[0].getFullYear()}`;
+            const visibles = dias.filter(d => horarioDia(d.getDay()));       // solo los días que abre (domingo si alguna sucursal abre)
+            const cont = document.getElementById('cuadricula-calendario');
+            if (!visibles.length) { cont.innerHTML = '<p class="p-8 text-center text-gray-500">No hay horario configurado para esta semana.</p>'; return; }
+            let ini = Infinity, fin = 0; visibles.forEach(d => { const hd = horarioDia(d.getDay()); ini = Math.min(ini, hd.ini); fin = Math.max(fin, hd.fin); });
+            const paso = intervaloActual(); gridSemana = { ini, fin, paso };
+            const cols = `grid-template-columns: 70px repeat(${visibles.length}, minmax(0, 1fr));`;
+            let html = `<div class="grid divide-x border-b border-gray-300" style="${cols}"><div class="bg-[#007bff] text-white font-bold p-2 flex items-center justify-center text-sm">Hora</div>`;
+            visibles.forEach(d => {
+                const f = formatearFechaISO(d); const bl = bloqueosDe(f).filter(b => !b.hora_inicio);
+                html += `<div class="${bl.length ? 'bg-red-500' : 'bg-[#007bff]'} text-white p-2 text-center flex flex-col justify-center" title="${esc(bl.map(textoBloqueo).join(' | '))}"><span class="font-bold text-sm">${DIAS_LARGO[d.getDay()]}</span><span class="text-xs text-blue-100">${d.getDate()} ${nombresMesesCorto[d.getMonth()]}${bl.length ? ' · 🚫 ' + esc(bl[0].medico || bl[0].motivo) : ''}</span></div>`;
+            });
+            html += '</div>';
+            for (let m = ini; m < fin; m += paso) {
+                const hora = aHora(m);
+                html += `<div class="grid divide-x border-b border-gray-200" style="${cols}"><div class="bg-gray-100 text-gray-700 font-bold p-1 flex items-center justify-center text-xs">${hora}</div>`;
+                visibles.forEach(d => {
+                    const f = formatearFechaISO(d); const hd = horarioDia(d.getDay()); const bl = bloqueosDe(f, hora);
+                    if (m < hd.ini || m >= hd.fin) {
+                        html += `<div id="celda-sem-${f}-${hora}" class="bg-gray-200 min-h-[4rem] p-1 flex flex-col gap-1" title="Cerrado"></div>`;
+                    } else if (bl.length) {
+                        html += `<div id="celda-sem-${f}-${hora}" class="bg-red-50 min-h-[4rem] p-1 flex flex-col gap-1" title="${esc(bl.map(textoBloqueo).join(' | '))}"><span class="text-[9px] text-red-600 font-bold truncate">🚫 ${esc(textoBloqueo(bl[0]))}</span></div>`;
+                    } else {
+                        html += `<div id="celda-sem-${f}-${hora}" class="bg-white min-h-[4rem] p-1 cursor-pointer hover:bg-blue-50 transition-colors flex flex-col gap-1 relative group" onclick="abrirModalNueva('${f}', '${hora}')"><div class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 bg-blue-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold z-10 transition-opacity" title="Agregar">+</div></div>`;
+                    }
                 });
                 html += '</div>';
-            });
-            document.getElementById('cuadricula-calendario').innerHTML = html;
+            }
+            cont.innerHTML = html;
         }
 
         function abrirModalAgendaDia(fecha) {
@@ -869,7 +960,12 @@ $usuario = requiere_staff_pagina();   // sin sesión → login_staff.php
             document.getElementById('titulo-calendario').innerText = `Agenda: ${sucursal === '' ? 'Todas las Sucursales' : sucursal}`;
             const r = rangoVisible();
             const qs = new URLSearchParams({ sucursal, tipo: tipoTratamientoActual, ya_es_paciente: yaPacienteActual, desde: r.desde, hasta: r.hasta });
-            fetch(`obtener_citas.php?${qs}`).then(res => res.json()).then(data => {
+            Promise.all([
+                fetch(`obtener_citas.php?${qs}`).then(res => res.json()),
+                fetch(`obtener_config_agenda.php?${new URLSearchParams(r)}`).then(res => res.json()),
+            ]).then(([data, cfg]) => {
+                if (cfg.status === 'success') configAgenda = cfg;
+                actualizarCuadricula();
                 if (data.status === 'success') { citasGlobales = data.data; renderizarCitasEnCalendario(citasGlobales); }
                 else { alert(data.message || 'No se pudieron cargar las citas.'); }
             }).catch(() => alert('Error de red al cargar las citas.'));
@@ -894,7 +990,12 @@ $usuario = requiere_staff_pagina();   // sin sesión → login_staff.php
             const citasPorCelda = {};
             citas.forEach(cita => {
                 const horaCorta = cita.hora.substring(0, 5); let idCelda = '';
-                if (vistaActual === 'semana') { const partes = horaCorta.split(':'); idCelda = `celda-sem-${cita.fecha}-${partes[0]}:${parseInt(partes[1]) >= 30 ? "30" : "00"}`; } else { idCelda = `celda-mes-${cita.fecha}`; }
+                if (vistaActual === 'semana') {
+                    // Se acomoda en el renglón que le toca según el intervalo (las de fuera de horario, en el primero/último)
+                    const g = gridSemana; let m = aMin(horaCorta);
+                    m = Math.min(Math.max(m, g.ini), g.fin - 1); m = g.ini + Math.floor((m - g.ini) / g.paso) * g.paso;
+                    idCelda = `celda-sem-${cita.fecha}-${aHora(m)}`;
+                } else { idCelda = `celda-mes-${cita.fecha}`; }
                 if (!citasPorCelda[idCelda]) citasPorCelda[idCelda] = []; citasPorCelda[idCelda].push(cita);
             });
 
@@ -922,18 +1023,102 @@ $usuario = requiere_staff_pagina();   // sin sesión → login_staff.php
             }
         }
 
+        function enviarCita(formData, idCita) {
+            fetch(idCita ? 'actualizar_cita.php' : 'guardar_cita.php', { method: 'POST', body: formData }).then(res => res.json()).then(data => {
+                const msg = document.getElementById('mensaje'); msg.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700', 'bg-blue-100', 'text-blue-800', 'bg-orange-100', 'text-orange-800');
+                if (data.status === 'advertencia') {
+                    if (confirm(`⚠️ ${data.message}\n\n¿Agendar de todos modos?`)) { formData.set('forzar', '1'); enviarCita(formData, idCita); }
+                    else { msg.classList.add('hidden'); }
+                    return;
+                }
+                if (data.status === 'success') { msg.textContent = data.message; msg.classList.add('bg-green-100', 'text-green-700'); cargarCitas(sucursalActual, ''); setTimeout(() => cerrarModal(), 1500); }
+                else { msg.textContent = data.message; msg.classList.add('bg-red-100', 'text-red-700'); }
+            }).catch(() => alert('Error de red al guardar la cita.'));
+        }
         document.getElementById('formCita').addEventListener('submit', function(e) {
             e.preventDefault(); const formData = new FormData(this); let asistenciaFinal = 'Pendiente';
             if (document.getElementById('checkSiAsistio').checked) asistenciaFinal = 'Asistió'; else if (document.getElementById('checkNoAsistio').checked) asistenciaFinal = 'No Asistió';
-            formData.append('asistencia', asistenciaFinal); const idCita = document.getElementById('inputIdCita').value;
-            fetch(idCita ? 'actualizar_cita.php' : 'guardar_cita.php', { method: 'POST', body: formData }).then(res => res.json()).then(data => {
-                const msg = document.getElementById('mensaje'); msg.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700', 'bg-blue-100', 'text-blue-800', 'bg-orange-100', 'text-orange-800');
-                if (data.status === 'success') { msg.textContent = data.message; msg.classList.add('bg-green-100', 'text-green-700'); cargarCitas(sucursalActual, ''); setTimeout(() => cerrarModal(), 1500); } 
-                else { msg.textContent = data.message; msg.classList.add('bg-red-100', 'text-red-700'); }
-            });
+            formData.append('asistencia', asistenciaFinal);
+            enviarCita(formData, document.getElementById('inputIdCita').value);
         });
 
-        document.addEventListener('DOMContentLoaded', () => { actualizarCuadricula(); cargarCitas('', 'menu-todas'); });
+        // ===== Ausencias =====
+        function abrirAusencias() {
+            const f = document.getElementById('formAusencia'); f.reset();
+            if (sucursalActual) f.sucursal.value = sucursalActual;
+            f.fecha_inicio.value = formatearFechaISO(new Date());
+            document.getElementById('modalAusencias').classList.remove('hidden'); cargarAusencias();
+        }
+        function cargarAusencias() {
+            const hoy = new Date(); const fin = new Date(); fin.setDate(fin.getDate() + 365);
+            const cont = document.getElementById('lista-ausencias'); cont.innerHTML = '<p class="text-gray-400 text-sm">Cargando…</p>';
+            fetch(`obtener_config_agenda.php?${new URLSearchParams({ desde: formatearFechaISO(hoy), hasta: formatearFechaISO(fin) })}`).then(r => r.json()).then(d => {
+                const lista = (d.bloqueos || []);
+                cont.innerHTML = lista.length ? lista.map(b => `<div class="flex justify-between items-center bg-white border border-red-200 rounded-lg p-3 text-sm"><div><strong class="text-red-700">${esc(b.medico || 'Toda la sucursal')}</strong> · ${esc(b.motivo)} <span class="text-gray-500">— ${esc(b.sucursal)}</span><br><span class="text-xs text-gray-600">📅 ${esc(b.fecha_inicio)}${b.fecha_fin !== b.fecha_inicio ? ' al ' + esc(b.fecha_fin) : ''} ${b.hora_inicio ? `⌚ ${esc(b.hora_inicio)}–${esc(b.hora_fin)}` : '(todo el día)'}</span></div><button onclick="eliminarAusencia(${parseInt(b.id_bloqueo)})" class="text-red-600 hover:underline text-xs font-bold">Quitar</button></div>`).join('')
+                    : '<p class="text-gray-500 text-sm italic">No hay ausencias registradas.</p>';
+            });
+        }
+        function guardarAusencia(ev) {
+            ev.preventDefault();
+            fetch('guardar_bloqueo.php', { method: 'POST', body: new FormData(ev.target) }).then(r => r.json()).then(d => {
+                alert((d.status === 'success' ? '✅ ' : 'Error: ') + d.message);
+                if (d.status === 'success') { ev.target.reset(); cargarAusencias(); cargarCitas(sucursalActual, ''); }
+            }).catch(() => alert('Error de red.'));
+        }
+        function eliminarAusencia(id) {
+            if (!confirm('¿Quitar esta ausencia? La agenda volverá a estar disponible.')) return;
+            const fd = new FormData(); fd.append('id_bloqueo', id);
+            fetch('eliminar_bloqueo.php', { method: 'POST', body: fd }).then(r => r.json()).then(d => {
+                if (d.status !== 'success') alert('Error: ' + d.message); cargarAusencias(); cargarCitas(sucursalActual, '');
+            });
+        }
+
+        // ===== Detalle de corte (consultarlo en el sistema en vez de imprimir) =====
+        function abrirDetalleCorte(id) {
+            const body = document.getElementById('detalle-corte-body'); body.innerHTML = '<tr><td colspan="9" class="text-center py-6 text-gray-400">Cargando…</td></tr>';
+            document.getElementById('modalDetalleCorte').classList.remove('hidden');
+            fetch(`obtener_corte_detalle.php?id_corte=${id}`).then(r => r.json()).then(d => {
+                if (d.status !== 'success') { body.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-red-500">${esc(d.message)}</td></tr>`; return; }
+                const c = d.corte;
+                document.getElementById('tituloDetalleCorte').innerText = `Corte #${c.id_corte} — ${c.sucursal} — ${c.fecha}`;
+                const dif = c.efectivo_contado !== null ? parseFloat(c.efectivo_contado) - parseFloat(c.efectivo) : null;
+                const tarjeta = (x) => `<div class="bg-gray-50 border rounded p-3"><div class="text-xs text-gray-500 uppercase font-bold">${x[0]}</div><div class="font-black text-lg ${x[2] || ''}">${x[1]}</div></div>`;
+                document.getElementById('detalle-corte-info').innerHTML = [
+                    ['Total del día', fmtMXN.format(c.total_general), 'text-blue-800'], ['Pacientes', esc(c.total_pacientes)],
+                    ['Efectivo', fmtMXN.format(c.efectivo)], ['Tarjetas', fmtMXN.format(parseFloat(c.credito) + parseFloat(c.debito))],
+                    ['Transferencias', fmtMXN.format(c.transferencia)], ['Efectivo contado', c.efectivo_contado !== null ? fmtMXN.format(c.efectivo_contado) : '—'],
+                    ['Diferencia de caja', dif === null ? '—' : fmtMXN.format(dif), dif && Math.abs(dif) > 0.009 ? 'text-red-600' : 'text-green-700'],
+                    ['Guardado por', esc(c.hecho_por || '—')],
+                ].map(tarjeta).join('');
+                body.innerHTML = d.remisiones.length ? d.remisiones.map(r => `<tr><td class="px-3 py-2 font-mono text-xs">${esc(r.folio)}</td><td class="px-3 py-2 font-bold">${esc(r.paciente)}</td><td class="px-3 py-2">${esc(r.servicio)}</td><td class="px-3 py-2 text-right">${fmtMXN.format(r.efectivo)}</td><td class="px-3 py-2 text-right">${fmtMXN.format(parseFloat(r.credito) + parseFloat(r.debito))}</td><td class="px-3 py-2 text-right">${fmtMXN.format(r.transferencia)}</td><td class="px-3 py-2 text-right font-black">${fmtMXN.format(r.total)}</td><td class="px-3 py-2 text-xs text-gray-500">${esc(r.cobro || '—')}</td><td class="px-3 py-2">${r.pdf ? `<a href="${esc(r.pdf)}" target="_blank" class="text-blue-700 underline text-xs">PDF</a>` : '—'}</td></tr>`).join('')
+                    : '<tr><td colspan="9" class="text-center py-6 text-gray-500">Sin remisiones vigentes.</td></tr>';
+            }).catch(() => { body.innerHTML = '<tr><td colspan="9" class="text-center py-6 text-red-500">Error de red.</td></tr>'; });
+        }
+
+        // ===== Imprimir carnet en la clínica =====
+        function imprimirCarnet() {
+            const t = document.getElementById('carnet-render');
+            html2pdf().set({ margin: 0, image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 3, useCORS: true }, jsPDF: { unit: 'pt', format: [t.offsetWidth, t.offsetHeight], orientation: 'landscape' } })
+                .from(t).output('bloburl').then(url => window.open(url, '_blank'));
+        }
+
+        // ===== Notas del médico =====
+        function cargarNotas() {
+            const cont = document.getElementById('lista-notas'); if (!cont) return; cont.innerHTML = '<p class="text-gray-400 text-sm">Cargando…</p>';
+            fetch(`obtener_valoraciones.php?id_cita=${encodeURIComponent(document.getElementById('inputIdCita').value)}`).then(r => r.json()).then(d => {
+                const lista = d.data || [];
+                cont.innerHTML = lista.length ? lista.map(v => `<div class="bg-white border border-blue-100 rounded-lg p-3 text-sm"><div class="flex justify-between text-xs text-gray-500 mb-1"><span>${esc(v.creado_en)} · ${esc(v.autor || '')}</span><span>${v.rodilla ? '🦵 ' + esc(v.rodilla) : ''} ${v.dolor_eva !== null ? '· Dolor ' + esc(v.dolor_eva) + '/10' : ''}</span></div>${v.diagnostico ? `<div class="font-bold text-gray-800">${esc(v.diagnostico)}</div>` : ''}${v.notas ? `<div class="text-gray-700 whitespace-pre-line">${esc(v.notas)}</div>` : ''}</div>`).join('')
+                    : '<p class="text-gray-500 text-sm italic">Sin notas todavía.</p>';
+            });
+        }
+        function guardarNota(ev) {
+            ev.preventDefault(); const fd = new FormData(ev.target); fd.append('id_cita', document.getElementById('inputIdCita').value);
+            fetch('guardar_valoracion.php', { method: 'POST', body: fd }).then(r => r.json()).then(d => {
+                if (d.status === 'success') { ev.target.reset(); cargarNotas(); } else { alert('Error: ' + d.message); }
+            }).catch(() => alert('Error de red.'));
+        }
+
+        document.addEventListener('DOMContentLoaded', () => { cargarCitas(SUCURSAL_FIJA, SUCURSAL_FIJA ? 'menu-suc-0' : 'menu-todas'); });
     </script>
 </body>
 </html>

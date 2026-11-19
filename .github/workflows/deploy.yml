@@ -60,7 +60,7 @@ jobs:
             **/.git*/**
             .github/**
             README.md
-            migracion_v2.sql
+            migracion_*.sql
             config.example.php
             remisiones_guardadas/*.pdf
             carnets_guardados/*.pdf

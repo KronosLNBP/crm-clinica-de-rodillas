@@ -18,6 +18,21 @@ PHP 8.1+ · MariaDB 10.4+ / MySQL 8 · Tailwind (CDN) · html2pdf.js
    (pendiente: pantalla de administración de usuarios).
 8. Comprueba que `https://…/app/remisiones_guardadas/` y `https://…/app/config.php` respondan **403**.
 
+## Novedades v3 (observaciones del equipo)
+
+Requiere correr **`migracion_v3.sql`** después de la v2.
+
+- **Horario por sucursal** (`admin.php → Horarios`): cada sucursal tiene sus horas por día e intervalo de citas.
+  La agenda solo muestra esas horas, el domingo aparece si alguna sucursal abre, y el sistema avisa si se agenda fuera de horario.
+- **Ausencias** (botón 🚫): vacaciones, permisos, "sale temprano" de un médico. Se ven en rojo en la agenda y se avisa antes
+  de agendar ahí; al registrarla dice cuántas citas ya había en ese periodo para reprogramarlas.
+- **Asistencia automática**: al emitir la remisión (pago) la cita queda como "Asistió".
+- **Cortes sin imprimir**: en Historial de cortes, clic en un corte → detalle con cada cobro, quién cobró, diferencia de caja y PDF.
+  Rol **Contabilidad** = solo consulta.
+- **Imprimir** recibo y carnet desde la clínica (para pacientes que no pueden descargarlos).
+- **Notas del médico** en el expediente (diagnóstico, rodilla, dolor 0-10, evolución). Solo médicos/terapeutas/admin.
+- **Usuarios** (`admin.php`): alta de personal con rol y sucursal. Una recepcionista con sucursal asignada solo ve y trabaja la suya.
+
 ## Deploy automático (GitHub Actions → FTP)
 
 Cada push a `main` sube el código por FTP (`.github/workflows/deploy.yml`) y genera `config.php` en el

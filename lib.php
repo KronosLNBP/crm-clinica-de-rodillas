@@ -26,6 +26,9 @@ set_exception_handler(function (Throwable $e): void {
 const ESTADOS_CITA =['Agendado', 'Confirmada', 'Express', 'Reagendada', 'Completada']; // 'Cancelada' solo vía eliminar_cita.php
 const ASISTENCIAS  = ['Pendiente', 'Asistió', 'No Asistió'];
 const MAX_PDF_BYTES = 5 * 1024 * 1024;
+const ROLES_OPERACION = ['admin', 'recepcion', 'medico', 'terapeuta'];   // pueden modificar
+const ROLES_CLINICOS  = ['admin', 'medico', 'terapeuta'];                // ven/escriben notas clínicas
+// 'contabilidad' = solo consulta (cortes, remisiones, agenda)
 
 function cfg(string $clave): string
 {
@@ -113,6 +116,77 @@ function servicio_por_nombre(PDO $pdo, string $nombre): ?array
     $st = $pdo->prepare('SELECT id_servicio, nombre FROM servicios WHERE nombre = ? AND activo = 1');
     $st->execute([$nombre]);
     return $st->fetch() ?: null;
+}
+
+// ---------- Sucursal asignada al usuario ----------
+/** Sucursal fija del usuario, o null si puede ver todas. */
+function sucursal_del_usuario(PDO $pdo, array $u): ?array
+{
+    if (empty($u['id_sucursal'])) {
+        return null;
+    }
+    $st = $pdo->prepare('SELECT id_sucursal, nombre_sucursal, clave FROM sucursales WHERE id_sucursal = ?');
+    $st->execute([$u['id_sucursal']]);
+    return $st->fetch() ?: null;
+}
+
+/** Nombre de sucursal que el usuario puede usar. Si tiene una asignada, se fuerza la suya. */
+function sucursal_permitida(PDO $pdo, array $u, string $pedida): string
+{
+    $s = sucursal_del_usuario($pdo, $u);
+    if (!$s) {
+        return $pedida;
+    }
+    if ($pedida !== '' && $pedida !== $s['nombre_sucursal']) {
+        error_usuario('Solo puedes trabajar con la sucursal ' . $s['nombre_sucursal'] . '.', 403);
+    }
+    return $s['nombre_sucursal'];
+}
+
+function verificar_cita_sucursal(PDO $pdo, array $u, int $idCita): void
+{
+    $s = sucursal_del_usuario($pdo, $u);
+    if (!$s) {
+        return;
+    }
+    $st = $pdo->prepare('SELECT sucursal FROM citas WHERE id_cita = ?');
+    $st->execute([$idCita]);
+    $suc = $st->fetchColumn();
+    if ($suc !== false && $suc !== $s['nombre_sucursal']) {
+        error_usuario('Esa cita es de otra sucursal.', 403);
+    }
+}
+
+// ---------- Horarios y ausencias ----------
+/** Devuelve un aviso si la fecha/hora cae fuera de horario o en una ausencia; null si todo bien. */
+function aviso_agenda(PDO $pdo, int $idSucursal, string $fecha, string $hora, bool $express): ?string
+{
+    $hora = substr($hora, 0, 5) . ':00';
+    if (!$express) {
+        $st = $pdo->prepare('SELECT COUNT(*) FROM sucursal_horarios WHERE id_sucursal = ?');
+        $st->execute([$idSucursal]);
+        if ((int)$st->fetchColumn() > 0) {                  // solo si la sucursal ya tiene horario configurado
+            $st = $pdo->prepare('SELECT hora_inicio, hora_fin FROM sucursal_horarios WHERE id_sucursal = ? AND dia_semana = ?');
+            $st->execute([$idSucursal, (int)date('w', strtotime($fecha))]);
+            $h = $st->fetch();
+            if (!$h) {
+                return 'La sucursal no abre ese día.';
+            }
+            if ($hora < $h['hora_inicio'] || $hora >= $h['hora_fin']) {
+                return 'Esa hora está fuera del horario de la sucursal (' . substr($h['hora_inicio'], 0, 5) . ' a ' . substr($h['hora_fin'], 0, 5) . ').';
+            }
+        }
+    }
+    $st = $pdo->prepare(
+        'SELECT medico, motivo FROM bloqueos_agenda
+          WHERE id_sucursal = ? AND ? BETWEEN fecha_inicio AND fecha_fin
+            AND (hora_inicio IS NULL OR (? >= hora_inicio AND ? < hora_fin)) LIMIT 1'
+    );
+    $st->execute([$idSucursal, $fecha, $hora, $hora]);
+    if ($b = $st->fetch()) {
+        return 'Agenda bloqueada: ' . trim(($b['medico'] ? $b['medico'] . ' – ' : '') . $b['motivo']) . '.';
+    }
+    return null;
 }
 
 // ---------- Pacientes ----------
