@@ -45,9 +45,49 @@ function usuario_actual(): ?array
     return $u;
 }
 
-/** Para endpoints JSON del CRM. Exige sesión y, en POST, token CSRF. */
+const TOKEN_DIAS = 30;
+
+/** Usuario de la app de Android: encabezado X-Api-Token (no lo bloquean los servidores Apache como a Authorization). */
+function usuario_por_token(): ?array
+{
+    global $pdo;
+    $tok = (string)($_SERVER['HTTP_X_API_TOKEN'] ?? '');
+    if (!preg_match('/^[a-f0-9]{64}$/', $tok)) {
+        return null;
+    }
+    $st = $pdo->prepare(
+        'SELECT u.id_usuario, u.nombre, u.rol, u.id_sucursal, t.id_token
+           FROM api_tokens t JOIN usuarios u ON u.id_usuario = t.id_usuario
+          WHERE t.token_hash = ? AND t.expira_en > NOW() AND u.activo = 1'
+    );
+    $st->execute([hash('sha256', $tok)]);
+    $r = $st->fetch();
+    if (!$r) {
+        return null;
+    }
+    $pdo->prepare('UPDATE api_tokens SET ultimo_uso = NOW() WHERE id_token = ?')->execute([$r['id_token']]);
+    return [
+        'id'          => (int)$r['id_usuario'],
+        'nombre'      => $r['nombre'],
+        'rol'         => $r['rol'],
+        'id_sucursal' => $r['id_sucursal'] !== null ? (int)$r['id_sucursal'] : null,
+        'id_token'    => (int)$r['id_token'],
+    ];
+}
+
+/** Para endpoints JSON del CRM. Acepta la sesión del navegador (con CSRF) o el token de la app. */
 function requiere_staff_api(array $roles = []): array
 {
+    if (isset($_SERVER['HTTP_X_API_TOKEN'])) {
+        $u = usuario_por_token();
+        if (!$u) {
+            responder(['status' => 'error', 'message' => 'Tu sesión expiró. Vuelve a iniciar sesión.', 'login' => true], 401);
+        }
+        if ($roles && !in_array($u['rol'], $roles, true)) {
+            error_usuario('No tienes permiso para esta acción.', 403);
+        }
+        return $u;   // sin CSRF: el token no viaja solo como una cookie, así que otra página no puede usarlo
+    }
     $u = usuario_actual();
     if (!$u) {
         responder(['status' => 'error', 'message' => 'Tu sesión expiró. Vuelve a iniciar sesión.', 'login' => true], 401);
