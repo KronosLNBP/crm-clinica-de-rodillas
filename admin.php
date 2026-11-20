@@ -24,6 +24,10 @@ $e = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#0E7C66">
+    <link rel="icon" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
     <meta name="csrf-token" content="<?= $e(csrf_token()) ?>">
     <title>Administración - Clínica de Rodillas</title>
     <script src="https://cdn.tailwindcss.com"></script>

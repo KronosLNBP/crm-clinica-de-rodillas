@@ -59,6 +59,10 @@ header('X-Frame-Options: DENY');
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#0E7C66">
+    <link rel="icon" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
     <title>Acceso personal - Clínica de Rodillas</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -82,5 +86,6 @@ header('X-Frame-Options: DENY');
         <?php endif; ?>
         <button class="w-full py-3 rounded-lg font-bold text-white bg-[#0E7C66] hover:bg-[#0A5E4D]">Entrar</button>
     </form>
+<script>if ('serviceWorker' in navigator) { window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {})); }</script>
 </body>
 </html>

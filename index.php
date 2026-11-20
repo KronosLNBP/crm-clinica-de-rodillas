@@ -15,6 +15,10 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#0E7C66">
+    <link rel="icon" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
     <title>CRM Clínica de Rodillas - Agenda</title>
     <meta name="csrf-token" content="<?= htmlspecialchars(csrf_token()) ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1278,5 +1282,6 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
 
         document.addEventListener('DOMContentLoaded', () => { sucursalActual = SUCURSAL_FIJA; document.querySelectorAll('.vista-btn').forEach(b => b.setAttribute('aria-pressed', b.dataset.vista === vistaActual ? 'true' : 'false')); lunesActual = lunesDe(diaActual); cargarCitas(SUCURSAL_FIJA, SUCURSAL_FIJA ? 'menu-suc-0' : 'menu-todas'); });
     </script>
+<script>if ('serviceWorker' in navigator) { window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {})); }</script>
 </body>
 </html>

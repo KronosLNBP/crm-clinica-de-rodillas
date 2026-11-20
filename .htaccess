@@ -1,3 +1,6 @@
+# Tipo correcto para el manifiesto de la app
+AddType application/manifest+json .webmanifest
+
 # Sin listado de carpetas
 Options -Indexes
 

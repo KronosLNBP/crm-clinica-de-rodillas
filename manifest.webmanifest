@@ -1,0 +1,23 @@
+{
+  "id": "./index.php",
+  "name": "CRM Clínica de Rodillas",
+  "short_name": "Clínica CR",
+  "description": "Agenda, cobros y cortes de las sucursales de la Clínica de Rodillas.",
+  "lang": "es-MX",
+  "start_url": "./index.php",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F3F6F5",
+  "theme_color": "#0E7C66",
+  "categories": ["medical", "business", "productivity"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Agenda de hoy", "url": "./index.php", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
