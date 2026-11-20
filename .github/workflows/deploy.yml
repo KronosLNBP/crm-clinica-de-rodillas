@@ -2,7 +2,7 @@
 # Secretos requeridos (Settings → Secrets and variables → Actions):
 #   FTP_SERVER, FTP_USERNAME, FTP_PASSWORD, FTP_SERVER_DIR   (ej. /public_html/dash/  ← con diagonal final)
 #   DB_NAME, DB_USER, DB_PASS, APP_SECRET
-# Variable opcional (pestaña "Variables"): BASE_URL  (por defecto https://grupoempresarialdiaz.com.mx/dash)
+# Variable opcional (pestaña "Variables"): BASE_URL  (por defecto https://grupoempresarialdiaz.com.mx/dash/dash)
 name: Deploy FTP
 
 on:
@@ -27,7 +27,7 @@ jobs:
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASS: ${{ secrets.DB_PASS }}
           APP_SECRET: ${{ secrets.APP_SECRET }}
-          BASE_URL: ${{ vars.BASE_URL || 'https://grupoempresarialdiaz.com.mx/dash' }}
+          BASE_URL: ${{ vars.BASE_URL || 'https://grupoempresarialdiaz.com.mx/dash/dash' }}
         run: |
           for v in DB_NAME DB_USER DB_PASS APP_SECRET; do
             if [ -z "${!v}" ]; then echo "::error::Falta el secreto $v"; exit 1; fi
@@ -59,6 +59,7 @@ jobs:
             **/.git*
             **/.git*/**
             .github/**
+            android/**
             README.md
             migracion_*.sql
             config.example.php

@@ -1,0 +1,26 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'mx.com.grupoempresarialdiaz.clinica'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'mx.com.grupoempresarialdiaz.clinica'
+        minSdk 21
+        targetSdk 35
+        versionCode 1
+        versionName '1.0'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    // Trusted Web Activity: abre el CRM a pantalla completa usando el Chrome del teléfono
+    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
+}
