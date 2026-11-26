@@ -329,14 +329,15 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
             <div id="panelNotaNueva" class="grid lg:grid-cols-[1fr_auto] gap-6 p-5">
                 <form id="formNota" onsubmit="guardarNota(event)" oninput="previaNota()" class="space-y-4 min-w-0">
                     <div class="grid sm:grid-cols-[1fr_150px] gap-3">
-                        <div><label class="block text-sm font-semibold mb-1" for="notaNombre">Nombre del cliente</label><input id="notaNombre" list="notaCitasHoy" required maxlength="150" autocomplete="off" oninput="ligarCitaNota()" class="w-full border border-gray-300 rounded-lg p-2" placeholder="Escribe o elige un paciente de hoy"><datalist id="notaCitasHoy"></datalist><p id="notaLigada" class="text-xs text-[#0A5E4D] mt-1 hidden"></p></div>
-                        <div><label class="block text-sm font-semibold mb-1" for="notaFecha">Fecha</label><input id="notaFecha" type="date" required class="w-full border border-gray-300 rounded-lg p-2"></div>
+                        <div><label class="block text-sm font-semibold mb-1" for="notaCitaSel">Paciente con cita</label><select id="notaCitaSel" onchange="elegirCitaNota()" class="w-full border border-gray-300 rounded-lg p-2 bg-white"><option value="">Cargando citas…</option></select></div>
+                        <div><label class="block text-sm font-semibold mb-1" for="notaFecha">Fecha</label><input id="notaFecha" type="date" required onchange="cargarCitasNota()" class="w-full border border-gray-300 rounded-lg p-2"></div>
                     </div>
+                    <div><label class="block text-sm font-semibold mb-1" for="notaNombre">Nombre del cliente</label><input id="notaNombre" required maxlength="150" autocomplete="off" oninput="ligarCitaNota()" class="w-full border border-gray-300 rounded-lg p-2" placeholder="Se llena al elegir la cita, o escríbelo si no tiene cita"><p id="notaLigada" class="text-xs text-[#0A5E4D] mt-1 hidden"></p></div>
                     <div><label class="block text-sm font-semibold mb-1" for="notaTel">Teléfono <span class="font-normal text-[#6B7B83]">(opcional, para mandarla por WhatsApp)</span></label><input id="notaTel" inputmode="numeric" maxlength="10" class="w-full sm:w-60 border border-gray-300 rounded-lg p-2" placeholder="10 dígitos"></div>
                     <div>
                         <p class="text-sm font-semibold mb-1">Conceptos</p>
                         <div class="border border-gray-200 rounded-xl overflow-hidden">
-                            <div class="grid grid-cols-[64px_1fr_110px_100px_32px] gap-2 bg-[#F3F6F5] px-3 py-2 text-xs font-semibold text-[#4B5A62]"><span>Cant.</span><span>Descripción</span><span>Precio unit.</span><span class="text-right">Importe</span><span></span></div>
+                            <div class="hidden sm:grid grid-cols-[64px_1fr_110px_100px_32px] gap-2 bg-[#F3F6F5] px-3 py-2 text-xs font-semibold text-[#4B5A62]"><span>Cant.</span><span>Descripción</span><span>Precio unit.</span><span class="text-right">Importe</span><span></span></div>
                             <div id="notaConceptos" class="divide-y"></div>
                         </div>
                         <datalist id="notaServicios"><option>Consulta de valoración</option><option>Sesión de terapia de rodilla</option><option>Sesión de Cámara Hiperbárica</option><option>Paquete de sesiones</option><option>Infiltración</option><option>Rodillera</option></datalist>
@@ -361,6 +362,7 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
                     <div><label class="block text-sm font-semibold mb-1" for="histNotaFecha">Fecha</label><input id="histNotaFecha" type="date" onchange="cargarHistNotas()" class="border border-gray-300 rounded-lg p-2"></div>
                     <div class="flex-1 min-w-[200px]"><label class="block text-sm font-semibold mb-1" for="histNotaBuscar">Buscar por nombre o folio</label><input id="histNotaBuscar" type="search" oninput="clearTimeout(window._tBuscaNota); window._tBuscaNota = setTimeout(cargarHistNotas, 350)" class="w-full border border-gray-300 rounded-lg p-2" placeholder="Ej. Rodríguez o DV-000043"></div>
                 </div>
+                <div id="pendHistNotas" class="mb-4"></div>
                 <div id="listaHistNotas" class="space-y-2"></div>
             </div>
         </div>
@@ -1379,10 +1381,26 @@ ${pill('MÉTODO DE PAGO:', 75, 660, 112)}${pill('NOMBRE Y FIRMA:', 334, 660, 112
             document.getElementById('subNotas').textContent = `Sucursal ${sucursalActual}`;
             nuevaNota(); tabNotas('nueva');
             document.getElementById('modalNotas').classList.remove('hidden');
-            fetch(`obtener_remisiones_dia.php?${new URLSearchParams({ sucursal: sucursalActual, fecha: formatearFechaISO(new Date()) })}`).then(r => r.json()).then(d => {
+        }
+        /** Citas de la fecha elegida (se vuelve a pedir al abrir, al cambiar la fecha y cuando la agenda cambia). */
+        function cargarCitasNota() {
+            const fecha = document.getElementById('notaFecha').value; if (!fecha || sucursalActual === '') return;
+            return fetch(`obtener_remisiones_dia.php?${new URLSearchParams({ sucursal: sucursalActual, fecha })}`).then(r => r.json()).then(d => {
                 notaCitas = d.status === 'success' ? d.data : [];
-                document.getElementById('notaCitasHoy').innerHTML = notaCitas.map(c => `<option value="${esc(c.paciente)}">${esc(String(c.hora).slice(0, 5))} · ${esc(c.tipo_tratamiento)}</option>`).join('');
+                const sel = document.getElementById('notaCitaSel');
+                const pend = notaCitas.filter(c => !c.id_remision).length;
+                sel.innerHTML = `<option value="">${notaCitas.length ? `Sin cita / otro cliente  (${pend} cita${pend === 1 ? '' : 's'} sin remisión)` : 'No hay citas ese día · cliente sin cita'}</option>`
+                    + notaCitas.map(c => `<option value="${parseInt(c.id_cita)}">${esc(String(c.hora).slice(0, 5))} · ${esc(c.paciente)} · ${esc(c.tipo_tratamiento)}${c.id_remision ? ' ✓ ' + esc(c.folio) : ''}</option>`).join('');
+                sel.value = notaIdCita && notaCitas.some(c => c.id_cita == notaIdCita) ? String(notaIdCita) : '';
+                if (sel.value === '' && notaIdCita) { notaIdCita = 0; ligarCitaNota(); }
             }).catch(() => {});
+        }
+        function elegirCitaNota() {
+            const c = notaCitas.find(x => x.id_cita == document.getElementById('notaCitaSel').value);
+            if (c && c.id_remision && !confirm(`${c.paciente} ya tiene la remisión ${c.folio}. ¿Hacer otra?`)) { document.getElementById('notaCitaSel').value = ''; return; }
+            document.getElementById('notaNombre').value = c ? c.paciente : '';
+            document.getElementById('notaTel').value = c && c.telefono ? c.telefono : '';
+            ligarCitaNota(); previaNota();
         }
         function cerrarNotas() { document.getElementById('modalNotas').classList.add('hidden'); }
         function tabNotas(t) {
@@ -1400,16 +1418,16 @@ ${pill('MÉTODO DE PAGO:', 75, 660, 112)}${pill('NOMBRE Y FIRMA:', 334, 660, 112
             document.getElementById('notaConceptos').innerHTML = '';
             document.getElementById('notaResultado').classList.add('hidden');
             document.getElementById('btnGuardarNota').disabled = false;
-            notaIdCita = 0; ligarCitaNota(); agregarConceptoNota();
+            notaIdCita = 0; ligarCitaNota(); agregarConceptoNota(); cargarCitasNota();
         }
         function agregarConceptoNota() {
             const cont = document.getElementById('notaConceptos');
             if (cont.children.length >= 12) { avisar('Máximo 12 conceptos por remisión.'); return; }
             const fila = document.createElement('div');
-            fila.className = 'grid grid-cols-[64px_1fr_110px_100px_32px] gap-2 items-center px-3 py-2 concepto-nota';
+            fila.className = 'grid grid-cols-[60px_1fr_1fr_28px] sm:grid-cols-[64px_1fr_110px_100px_32px] gap-2 items-center px-3 py-2 concepto-nota';
             fila.innerHTML = `<input type="number" min="1" max="999" value="1" required class="c-cant w-full border border-gray-300 rounded-md p-1.5 text-center" aria-label="Cantidad">`
-                + `<input list="notaServicios" maxlength="150" required class="c-desc w-full border border-gray-300 rounded-md p-1.5" placeholder="Descripción" aria-label="Descripción">`
-                + `<input type="number" min="0" step="0.01" required class="c-precio w-full border border-gray-300 rounded-md p-1.5 text-right" placeholder="0.00" aria-label="Precio unitario">`
+                + `<input list="notaServicios" maxlength="150" required class="c-desc col-span-4 sm:col-span-1 order-first sm:order-none w-full border border-gray-300 rounded-md p-1.5" placeholder="Descripción del servicio o producto" aria-label="Descripción">`
+                + `<input type="number" min="0" step="0.01" required class="c-precio w-full border border-gray-300 rounded-md p-1.5 text-right" placeholder="Precio" aria-label="Precio unitario">`
                 + `<span class="c-imp text-right font-semibold">$0.00</span>`
                 + `<button type="button" onclick="this.parentElement.remove(); previaNota()" class="text-[#6B7B83] hover:text-red-600 text-xl leading-none" aria-label="Quitar concepto">&times;</button>`;
             cont.appendChild(fila); previaNota();
@@ -1417,11 +1435,13 @@ ${pill('MÉTODO DE PAGO:', 75, 660, 112)}${pill('NOMBRE Y FIRMA:', 334, 660, 112
         }
         function ligarCitaNota() {
             const nombre = document.getElementById('notaNombre').value.trim().toLowerCase();
-            const c = notaCitas.find(x => String(x.paciente).trim().toLowerCase() === nombre);
+            const elegida = notaCitas.find(x => x.id_cita == document.getElementById('notaCitaSel').value);
+            const c = elegida && String(elegida.paciente).trim().toLowerCase() === nombre ? elegida : notaCitas.find(x => String(x.paciente).trim().toLowerCase() === nombre);
             notaIdCita = c ? parseInt(c.id_cita) : 0;
+            document.getElementById('notaCitaSel').value = c ? String(c.id_cita) : '';
             const p = document.getElementById('notaLigada');
             p.classList.toggle('hidden', !c);
-            if (c) { p.textContent = `Ligada a su cita de hoy (${String(c.hora).slice(0, 5)}). Se marcará como asistió.`; if (!document.getElementById('notaTel').value && c.telefono) document.getElementById('notaTel').value = c.telefono; }
+            if (c) { p.textContent = `Ligada a su cita de las ${String(c.hora).slice(0, 5)}. Se marcará como asistió.`; if (!document.getElementById('notaTel').value && c.telefono) document.getElementById('notaTel').value = c.telefono; }
         }
         function datosNota(folio) {
             const conceptos = [...document.querySelectorAll('.concepto-nota')].map(f => ({ cantidad: parseInt(f.querySelector('.c-cant').value) || 0, descripcion: f.querySelector('.c-desc').value.trim(), precio: parseFloat(f.querySelector('.c-precio').value) || 0 }));
@@ -1471,6 +1491,11 @@ ${pill('MÉTODO DE PAGO:', 75, 660, 112)}${pill('NOMBRE Y FIRMA:', 334, 660, 112
             const cont = document.getElementById('listaHistNotas');
             cont.innerHTML = '<p class="text-[#6B7B83] text-sm">Cargando…</p>';
             const params = { sucursal: sucursalActual }; if (q) params.q = q; else params.fecha = document.getElementById('histNotaFecha').value;
+            const pendCont = document.getElementById('pendHistNotas'); pendCont.innerHTML = '';
+            if (!q) fetch(`obtener_remisiones_dia.php?${new URLSearchParams({ sucursal: sucursalActual, fecha: params.fecha })}`).then(r => r.json()).then(d => {
+                const pend = d.status === 'success' ? d.data.filter(c => !c.id_remision) : [];
+                pendCont.innerHTML = pend.length ? `<p class="text-sm font-bold mb-2">Citas sin remisión (${pend.length})</p><div class="space-y-2">` + pend.map(c => `<div class="flex flex-wrap items-center gap-3 border border-dashed border-[#BFE3CD] bg-[#F1FAF7] rounded-xl px-4 py-2"><span class="font-mono text-sm text-[#6B7B83] w-24">${esc(String(c.hora).slice(0, 5))}</span><div class="flex-1 min-w-[160px]"><p class="font-semibold">${esc(c.paciente)}</p><p class="text-xs text-[#6B7B83]">${esc(c.tipo_tratamiento)}</p></div><button onclick="remisionDesdeCita(${parseInt(c.id_cita)}, '${esc(params.fecha)}')" class="bg-[#0E7C66] text-white text-sm font-semibold rounded-lg px-3 py-1.5">Hacer remisión</button></div>`).join('') + '</div><p class="text-sm font-bold mt-4">Remisiones emitidas</p>' : '';
+            }).catch(() => {});
             fetch(`obtener_notas_remision.php?${new URLSearchParams(params)}`).then(r => r.json()).then(d => {
                 if (d.status !== 'success') { cont.innerHTML = `<p class="text-red-600 text-sm">${esc(d.message)}</p>`; return; }
                 histNotas = d.data;
@@ -1485,6 +1510,13 @@ ${pill('MÉTODO DE PAGO:', 75, 660, 112)}${pill('NOMBRE Y FIRMA:', 334, 660, 112
                     </div>`;
                 }).join('') : '<p class="text-[#6B7B83] text-sm">No hay remisiones con ese filtro.</p>';
             }).catch(() => { cont.innerHTML = '<p class="text-red-600 text-sm">Error de conexión.</p>'; });
+        }
+        async function remisionDesdeCita(idCita, fecha) {
+            nuevaNota(); tabNotas('nueva');
+            document.getElementById('notaFecha').value = fecha;
+            await cargarCitasNota();
+            document.getElementById('notaCitaSel').value = String(idCita); elegirCitaNota();
+            document.querySelector('.concepto-nota .c-desc')?.focus();
         }
         /** Vuelve a generar el PDF con el formato de la clínica (útil para cobros anteriores o si falló la subida). */
         async function regenerarNota(i, btn) {
@@ -1569,7 +1601,10 @@ ${pill('MÉTODO DE PAGO:', 75, 660, 112)}${pill('NOMBRE Y FIRMA:', 334, 660, 112
                 if (d.status !== 'success') return;
                 const estado = document.getElementById('estadoVivo');
                 estado.textContent = '● Al día · ' + new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
-                if (firmaAgenda !== null && d.firma !== firmaAgenda) { cargarCitas(sucursalActual, ''); avisar('🔄 La agenda se actualizó con cambios nuevos'); }
+                if (firmaAgenda !== null && d.firma !== firmaAgenda) {
+                    cargarCitas(sucursalActual, ''); avisar('🔄 La agenda se actualizó con cambios nuevos');
+                    if (!document.getElementById('modalNotas').classList.contains('hidden')) { cargarCitasNota(); if (!document.getElementById('panelNotaHist').classList.contains('hidden')) cargarHistNotas(); }
+                }
                 firmaAgenda = d.firma;
             }).catch(() => { document.getElementById('estadoVivo').textContent = '○ Sin conexión, reintentando…'; })
               .finally(() => { revisando = false; });
