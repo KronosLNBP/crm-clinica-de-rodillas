@@ -141,6 +141,7 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
             <div>
                 <p id="titulo-calendario" class="text-sm font-semibold text-jade">Agenda</p>
                 <h1 id="texto-rango" class="text-3xl md:text-4xl font-extrabold tracking-tight tabular">Cargando…</h1>
+                <p id="estadoVivo" class="text-xs text-[#6B7B83] mt-1" title="La agenda se actualiza sola cada 20 segundos">● Se actualiza sola</p>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
                 <div class="flex items-center bg-white border border-[#DDE5E2] rounded-xl">
@@ -426,6 +427,8 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
         </div>
     </div>
 
+    <div id="toast" role="status" aria-live="polite" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#1E2B33] text-white text-sm font-semibold px-4 py-3 rounded-xl shadow-lg z-[100] no-print"></div>
+
     <!-- MODAL CUMPLEAÑOS -->
     <div id="modalCumples" class="fixed inset-0 bg-black bg-opacity-60 hidden flex justify-center items-center z-[70] p-4 no-print">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
@@ -521,6 +524,7 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
                     <button type="button" id="btnCarnet" onclick="abrirCarnet()" class="hidden bg-purple-500 text-white font-bold py-2 px-1 rounded hover:bg-purple-600 transition duration-200 text-sm flex items-center justify-center gap-1">🪪 Carnet</button>
                     <button type="button" id="btnSubsecuente" onclick="prepararSubsecuente()" class="hidden bg-teal-500 text-white font-bold py-2 px-1 rounded hover:bg-teal-600 transition duration-200 text-sm flex items-center justify-center gap-1">🔁 Subsecuente</button>
                     <button type="button" id="btnEliminar" onclick="eliminarCita()" class="hidden bg-red-500 text-white font-bold py-2 px-1 rounded hover:bg-red-600 transition duration-200 text-sm flex items-center justify-center gap-1">🗑️ Eliminar</button>
+                    <button type="button" id="btnCopiarCita" onclick="confirmacionDesdeFormulario()" class="col-span-2 bg-white font-bold py-2 px-1 rounded text-sm flex items-center justify-center gap-1">📋 Mensaje de confirmación para el paciente</button>
                 </div>
                 <button type="submit" id="btnGuardar" class="w-full mt-3 bg-[#10b981] text-white font-bold py-3 px-4 rounded hover:bg-green-600 transition duration-200">Guardar Cita</button>
             </form>
@@ -1087,7 +1091,7 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
             ]).then(([data, cfg]) => {
                 if (cfg.status === 'success') configAgenda = cfg;
                 actualizarCuadricula();
-                if (data.status === 'success') { citasGlobales = data.data; renderizarCitasEnCalendario(citasGlobales); }
+                if (data.status === 'success') { citasGlobales = data.data; renderizarCitasEnCalendario(citasGlobales); firmaAgenda = null; revisarCambios(); }
                 else { alert(data.message || 'No se pudieron cargar las citas.'); }
             }).catch(() => alert('Error de red al cargar las citas.'));
         }
@@ -1147,13 +1151,13 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
 
         function enviarCita(formData, idCita) {
             fetch(idCita ? 'actualizar_cita.php' : 'guardar_cita.php', { method: 'POST', body: formData }).then(res => res.json()).then(data => {
-                const msg = document.getElementById('mensaje'); msg.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700', 'bg-blue-100', 'text-blue-800', 'bg-orange-100', 'text-orange-800');
+                const msg = document.getElementById('mensaje'); msg.className = 'text-sm font-medium rounded p-2 text-center';
                 if (data.status === 'advertencia') {
                     if (confirm(`⚠️ ${data.message}\n\n¿Agendar de todos modos?`)) { formData.set('forzar', '1'); enviarCita(formData, idCita); }
                     else { msg.classList.add('hidden'); }
                     return;
                 }
-                if (data.status === 'success') { msg.textContent = data.message; msg.classList.add('bg-green-100', 'text-green-700'); cargarCitas(sucursalActual, ''); setTimeout(() => cerrarModal(), 1500); }
+                if (data.status === 'success') { cargarCitas(sucursalActual, ''); mostrarConfirmacionCita(datosDeFormulario(formData), data.message); }
                 else { msg.textContent = data.message; msg.classList.add('bg-red-100', 'text-red-700'); }
             }).catch(() => alert('Error de red al guardar la cita.'));
         }
@@ -1223,6 +1227,70 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
             abrirRemisiones();
             document.getElementById('inputFechaRemision').value = c.fecha; cargarDatosRemision();
         }
+
+        // ===== Mensaje de confirmación para el paciente (copiar / WhatsApp) =====
+        function datosDeFormulario(fd) {
+            const g = (k) => (fd instanceof FormData ? fd.get(k) : document.querySelector(`#formCita [name="${k}"]`)?.value) || '';
+            return { paciente: g('paciente'), telefono: g('telefono'), fecha: g('fecha'), hora: g('hora'), sucursal: g('sucursal'), tipo: g('tipo') };
+        }
+        function textoConfirmacion(d) {
+            const f = new Date(d.fecha + 'T12:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+            const [hh, mm] = (d.hora || '00:00').split(':').map(Number);
+            const hora = `${((hh + 11) % 12) + 1}:${String(mm).padStart(2, '0')} ${hh < 12 ? 'a. m.' : 'p. m.'}`;
+            return `Hola ${d.paciente.split(' ')[0]} 👋, tu cita en Clínica de Rodillas quedó agendada:\n\n`
+                 + `📅 ${f.charAt(0).toUpperCase() + f.slice(1)}\n⏰ ${hora}\n📍 Sucursal ${d.sucursal}\n🩺 ${d.tipo}\n\n`
+                 + `Te pedimos llegar 10 minutos antes. Si necesitas cambiarla, responde a este mensaje. ¡Te esperamos!`;
+        }
+        // silencioso = copia automática al guardar: si el navegador no lo permite, no molesta (queda el botón Copiar)
+        function copiarTexto(t, silencioso = false) {
+            const ok = () => avisar('📋 Mensaje copiado. Pégalo en WhatsApp o donde lo necesites.');
+            if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(t).then(ok).catch(() => copiarRespaldo(t, ok, silencioso));
+            copiarRespaldo(t, ok, silencioso);
+        }
+        function copiarRespaldo(t, ok, silencioso) {
+            const a = document.createElement('textarea'); a.value = t; a.style.position = 'fixed'; a.style.opacity = '0';
+            document.body.appendChild(a); a.select();
+            let copiado = false; try { copiado = document.execCommand('copy'); } catch (e) {}
+            a.remove();
+            if (copiado) ok(); else if (!silencioso) prompt('Copia el mensaje:', t);
+        }
+        function linkWhatsApp(tel, texto) { const n = String(tel || '').replace(/\D/g, ''); return `https://wa.me/${n.length === 10 ? '52' + n : n}?text=${encodeURIComponent(texto)}`; }
+        let ultimaConfirmacion = '';
+        function mostrarConfirmacionCita(d, titulo) {
+            ultimaConfirmacion = textoConfirmacion(d);
+            const msg = document.getElementById('mensaje');
+            msg.className = 'text-sm rounded-xl p-4 text-left bg-[#E3F2EE] text-[#1E2B33]';
+            msg.innerHTML = `<p class="font-bold text-[#0A5E4D] mb-2">✅ ${esc(titulo || 'Cita guardada')}</p>`
+                + `<pre class="whitespace-pre-wrap font-sans bg-white rounded-lg p-3 border border-[#DDE5E2] mb-3">${esc(ultimaConfirmacion)}</pre>`
+                + `<div class="grid grid-cols-3 gap-2"><button type="button" onclick="copiarTexto(ultimaConfirmacion)" class="bg-[#0E7C66] text-white font-bold py-2 rounded-lg">📋 Copiar</button>`
+                + `<a href="${esc(linkWhatsApp(d.telefono, ultimaConfirmacion))}" target="_blank" rel="noopener" class="bg-[#25D366] text-white font-bold py-2 rounded-lg text-center">WhatsApp</a>`
+                + `<button type="button" onclick="cerrarModal()" class="bg-white border border-[#DDE5E2] font-bold py-2 rounded-lg">Cerrar</button></div>`;
+            copiarTexto(ultimaConfirmacion, true);   // se copia en automático al guardar
+            msg.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        function confirmacionDesdeFormulario() { mostrarConfirmacionCita(datosDeFormulario(null), 'Mensaje listo para el paciente'); }
+        let toastTimer = null;
+        function avisar(t) {
+            const el = document.getElementById('toast'); el.textContent = t; el.classList.remove('hidden');
+            clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.add('hidden'), 3000);
+        }
+
+        // ===== Actualización automática (sin recargar la página) =====
+        let firmaAgenda = null, revisando = false;
+        function revisarCambios() {
+            if (revisando || document.visibilityState !== 'visible') return;
+            revisando = true;
+            fetch(`obtener_cambios.php?${new URLSearchParams({ sucursal: sucursalActual, ...rangoVisible() })}`).then(r => r.json()).then(d => {
+                if (d.status !== 'success') return;
+                const estado = document.getElementById('estadoVivo');
+                estado.textContent = '● Al día · ' + new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+                if (firmaAgenda !== null && d.firma !== firmaAgenda) { cargarCitas(sucursalActual, ''); avisar('🔄 La agenda se actualizó con cambios nuevos'); }
+                firmaAgenda = d.firma;
+            }).catch(() => { document.getElementById('estadoVivo').textContent = '○ Sin conexión, reintentando…'; })
+              .finally(() => { revisando = false; });
+        }
+        setInterval(revisarCambios, 20000);
+        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') revisarCambios(); });
 
         // ===== Edad automática desde la fecha de nacimiento =====
         function calcularEdad() {
