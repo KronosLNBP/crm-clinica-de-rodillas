@@ -22,7 +22,7 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
     <title>CRM Clínica de Rodillas - Agenda</title>
     <meta name="csrf-token" content="<?= htmlspecialchars(csrf_token()) ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Great+Vibes&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = { theme: { extend: {
@@ -124,6 +124,7 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
         <nav aria-label="Herramientas" class="flex md:flex-col gap-1 overflow-x-auto">
             <p class="hidden md:block text-xs font-semibold text-[#6B7B83] px-2 mb-1">Herramientas</p>
             <button onclick="abrirRemisiones()" class="solo-operacion nav-item whitespace-nowrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg> Cobros del día</button>
+            <button onclick="abrirNotas()" class="solo-operacion nav-item whitespace-nowrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg> Remisiones</button>
             <button onclick="abrirModalAsistencias()" class="solo-operacion nav-item whitespace-nowrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg> Pasar asistencia</button>
             <button onclick="abrirDirectorio()" class="nav-item whitespace-nowrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> Pacientes y citas</button>
             <button onclick="abrirHistorialCortes()" class="solo-admin nav-item whitespace-nowrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg> Cortes de caja</button>
@@ -313,6 +314,58 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
     </div>
 
     <!-- MODAL DE REMISIONES / CONTROL DIARIO -->
+    <div id="modalNotas" class="fixed inset-0 bg-black/50 hidden z-50 p-3 md:p-6 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="tituloNotas">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-6xl mx-auto">
+            <div class="flex items-center justify-between gap-3 px-5 py-4 border-b">
+                <div><h2 id="tituloNotas" class="text-xl font-extrabold">Remisiones</h2><p id="subNotas" class="text-sm text-[#6B7B83]"></p></div>
+                <div class="flex items-center gap-2">
+                    <div class="inline-flex rounded-lg bg-[#EEF3F1] p-1 text-sm font-semibold" role="tablist">
+                        <button id="tabNotaNueva" onclick="tabNotas('nueva')" class="px-3 py-1.5 rounded-md bg-white shadow-sm">Nueva</button>
+                        <button id="tabNotaHist" onclick="tabNotas('hist')" class="px-3 py-1.5 rounded-md text-[#4B5A62]">Historial</button>
+                    </div>
+                    <button onclick="cerrarNotas()" class="text-[#6B7B83] hover:text-red-600 text-3xl leading-none px-2" aria-label="Cerrar">&times;</button>
+                </div>
+            </div>
+            <div id="panelNotaNueva" class="grid lg:grid-cols-[1fr_auto] gap-6 p-5">
+                <form id="formNota" onsubmit="guardarNota(event)" oninput="previaNota()" class="space-y-4 min-w-0">
+                    <div class="grid sm:grid-cols-[1fr_150px] gap-3">
+                        <div><label class="block text-sm font-semibold mb-1" for="notaNombre">Nombre del cliente</label><input id="notaNombre" list="notaCitasHoy" required maxlength="150" autocomplete="off" oninput="ligarCitaNota()" class="w-full border border-gray-300 rounded-lg p-2" placeholder="Escribe o elige un paciente de hoy"><datalist id="notaCitasHoy"></datalist><p id="notaLigada" class="text-xs text-[#0A5E4D] mt-1 hidden"></p></div>
+                        <div><label class="block text-sm font-semibold mb-1" for="notaFecha">Fecha</label><input id="notaFecha" type="date" required class="w-full border border-gray-300 rounded-lg p-2"></div>
+                    </div>
+                    <div><label class="block text-sm font-semibold mb-1" for="notaTel">Teléfono <span class="font-normal text-[#6B7B83]">(opcional, para mandarla por WhatsApp)</span></label><input id="notaTel" inputmode="numeric" maxlength="10" class="w-full sm:w-60 border border-gray-300 rounded-lg p-2" placeholder="10 dígitos"></div>
+                    <div>
+                        <p class="text-sm font-semibold mb-1">Conceptos</p>
+                        <div class="border border-gray-200 rounded-xl overflow-hidden">
+                            <div class="grid grid-cols-[64px_1fr_110px_100px_32px] gap-2 bg-[#F3F6F5] px-3 py-2 text-xs font-semibold text-[#4B5A62]"><span>Cant.</span><span>Descripción</span><span>Precio unit.</span><span class="text-right">Importe</span><span></span></div>
+                            <div id="notaConceptos" class="divide-y"></div>
+                        </div>
+                        <datalist id="notaServicios"><option>Consulta de valoración</option><option>Sesión de terapia de rodilla</option><option>Sesión de Cámara Hiperbárica</option><option>Paquete de sesiones</option><option>Infiltración</option><option>Rodillera</option></datalist>
+                        <div class="flex items-center justify-between mt-2"><button type="button" onclick="agregarConceptoNota()" class="text-sm font-semibold text-[#0E7C66] hover:underline">+ Agregar concepto</button><p class="text-lg font-extrabold">Total: <span id="notaTotal">$0.00</span></p></div>
+                    </div>
+                    <div><label class="block text-sm font-semibold mb-1" for="notaObs">Observaciones</label><textarea id="notaObs" rows="2" maxlength="250" class="w-full border border-gray-300 rounded-lg p-2"></textarea></div>
+                    <div class="grid sm:grid-cols-2 gap-3">
+                        <div><label class="block text-sm font-semibold mb-1" for="notaMetodo">Método de pago</label><select id="notaMetodo" required class="w-full border border-gray-300 rounded-lg p-2 bg-white"><option value="">Elige…</option><option>Efectivo</option><option>Tarjeta de crédito</option><option>Tarjeta de débito</option><option>Transferencia</option></select></div>
+                        <div><label class="block text-sm font-semibold mb-1" for="notaAtendio">Nombre y firma (quién atiende)</label><input id="notaAtendio" maxlength="100" class="w-full border border-gray-300 rounded-lg p-2"></div>
+                    </div>
+                    <p class="text-xs text-[#6B7B83]">Al guardar se asigna el folio de la sucursal, el cobro entra al corte del día y el PDF queda guardado como respaldo.</p>
+                    <div id="notaResultado" class="hidden rounded-xl border border-[#BFE3CD] bg-[#F1FAF7] p-3"></div>
+                    <button id="btnGuardarNota" type="submit" class="w-full bg-[#0E7C66] hover:bg-[#0A5E4D] text-white font-bold rounded-xl py-3">Guardar y generar PDF</button>
+                </form>
+                <div class="hidden lg:block">
+                    <p class="text-xs font-semibold text-[#6B7B83] mb-2">Vista previa</p>
+                    <div style="width:396px;height:612px;overflow:hidden;border-radius:10px;box-shadow:0 10px 30px -12px rgba(30,43,51,.35);border:1px solid #E2E8E6"><div id="notaPrevia" style="transform:scale(.75);transform-origin:0 0;width:528px;height:816px"></div></div>
+                </div>
+            </div>
+            <div id="panelNotaHist" class="hidden p-5">
+                <div class="flex flex-wrap items-end gap-3 mb-4">
+                    <div><label class="block text-sm font-semibold mb-1" for="histNotaFecha">Fecha</label><input id="histNotaFecha" type="date" onchange="cargarHistNotas()" class="border border-gray-300 rounded-lg p-2"></div>
+                    <div class="flex-1 min-w-[200px]"><label class="block text-sm font-semibold mb-1" for="histNotaBuscar">Buscar por nombre o folio</label><input id="histNotaBuscar" type="search" oninput="clearTimeout(window._tBuscaNota); window._tBuscaNota = setTimeout(cargarHistNotas, 350)" class="w-full border border-gray-300 rounded-lg p-2" placeholder="Ej. Rodríguez o DV-000043"></div>
+                </div>
+                <div id="listaHistNotas" class="space-y-2"></div>
+            </div>
+        </div>
+    </div>
+
     <div id="modalRemisiones" class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50 p-4">
         <div class="bg-white rounded-lg shadow-lg w-full max-w-6xl max-h-[95vh] flex flex-col">
             <div class="flex justify-between items-center p-4 border-b bg-emerald-50 rounded-t-lg no-print">
@@ -805,8 +858,13 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
                             + `<td class="px-2 py-1 text-center no-print"><button onclick="emitirReciboCliente(${parseInt(c.id_cita)})" class="${emitida ? 'bg-gray-400 hover:bg-gray-500' : 'bg-emerald-500 hover:bg-emerald-600'} text-white px-3 py-1.5 rounded shadow text-xs font-bold transition-colors w-full">${emitida ? '➕ Otro cobro' : '📤 Emitir PDF'}</button>${emitida && c.ruta_archivo ? `<a href="ver_archivo.php?f=${encodeURIComponent(c.ruta_archivo)}" target="_blank" class="block mt-1 text-xs text-blue-700 underline">🖨️ Ver / imprimir</a>` : ''}</td></tr>`;
                     }).join('');
                 }
-                document.getElementById('tot-pacientes').innerText = remisionesDia.length;
-                const folios = remisionesDia.filter(c => c.folio).map(c => c.folio).sort();
+                (data.sueltas || []).forEach(r => {
+                    const v = (k) => parseFloat(r[k]) > 0 ? `value="${esc(r[k])}"` : '';
+                    const celda = (cls, k) => `<td class="px-2 py-1 border-r border-gray-300"><input type="number" ${v(k)} readonly tabindex="-1" class="${cls} border-0 w-full text-sm text-right font-bold bg-transparent outline-none"></td>`;
+                    tbody.insertAdjacentHTML('beforeend', `<tr class="border-b border-gray-300 bg-sky-50"><td class="px-2 py-1 text-center text-gray-500 border-r border-gray-300">—</td><td class="px-2 py-1 border-r border-gray-300 font-mono text-xs text-emerald-700 font-bold">${esc(r.folio)}</td><td class="px-3 py-1 border-r border-gray-300 font-bold text-gray-900 truncate">${esc(r.paciente)} <span class="text-xs font-normal text-sky-700">(sin cita)</span></td><td class="px-2 py-1 border-r border-gray-300 text-sm text-gray-600 truncate">${esc(r.servicio)}</td>${celda('input-efectivo', 'efectivo')}${celda('input-credito', 'credito')}${celda('input-debito', 'debito')}${celda('input-transferencia', 'transferencia')}<td class="px-2 py-1 text-center no-print">${r.ruta_archivo ? `<a href="ver_archivo.php?f=${encodeURIComponent(r.ruta_archivo)}" target="_blank" class="text-xs text-blue-700 underline">🖨️ Ver / imprimir</a>` : ''}</td></tr>`);
+                });
+                document.getElementById('tot-pacientes').innerText = remisionesDia.length + (data.sueltas || []).length;
+                const folios = [...remisionesDia, ...(data.sueltas || [])].filter(c => c.folio).map(c => c.folio).sort();
                 document.getElementById('folio-inicio').value = folios[0] || '';
                 document.getElementById('folio-fin').value = folios[folios.length - 1] || '';
                 calcularTotalesRemision();
@@ -819,10 +877,8 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
         }
 
         function generarPdfRemision(c, folio, servicio, efectivo, credito, debito, transf, total, fecha) {
-            const d = document.createElement('div');
-            d.innerHTML = `<div style="padding: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; background: #fff;"><div style="text-align: center; border-bottom: 3px solid #1e3a8a; padding-bottom: 15px; margin-bottom: 25px;"><h1 style="color: #1e3a8a; margin: 0; font-size: 26px; text-transform: uppercase; font-weight: 900;">Clínica de Rodillas</h1><p style="margin: 5px 0 0 0; color: #666; font-size: 14px; font-weight: bold; letter-spacing: 1px;">SUCURSAL ${esc(c.sucursal.toUpperCase())}</p></div><div style="display: flex; justify-content: space-between; margin-bottom: 30px; font-size: 14px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;"><div><p style="margin: 4px 0;"><strong>Paciente:</strong> ${esc(c.paciente)}</p><p style="margin: 4px 0;"><strong>Teléfono:</strong> ${esc(c.telefono)}</p><p style="margin: 4px 0; color: #1e3a8a;"><strong>Especialidad:</strong> ${esc(c.tipo_tratamiento)}</p></div><div style="text-align: right;"><p style="margin: 4px 0; color: #e11d48; font-weight: bold; font-size: 16px;"><strong>Folio:</strong> ${esc(folio)}</p><p style="margin: 4px 0;"><strong>Fecha:</strong> ${esc(fecha)}</p></div></div><h3 style="color: #1e3a8a; font-size: 16px; border-bottom: 2px solid #cbd5e1; padding-bottom: 5px; margin-bottom: 15px; text-transform: uppercase;">Detalle del Servicio</h3><div style="padding: 15px; background: #f1f5f9; border-radius: 6px; font-size: 15px; margin-bottom: 30px; border-left: 4px solid #1e3a8a;">${esc(servicio)}</div><div style="width: 280px; margin-left: auto; font-size: 14px;"><div style="display: flex; justify-content: space-between; padding: 5px 0; color: #475569;"><span>Efectivo:</span> <span>${fmtMXN.format(efectivo)}</span></div><div style="display: flex; justify-content: space-between; padding: 5px 0; color: #475569;"><span>Tarjetas:</span> <span>${fmtMXN.format(credito + debito)}</span></div><div style="display: flex; justify-content: space-between; padding: 5px 0; color: #475569; border-bottom: 1px solid #cbd5e1; padding-bottom: 10px; margin-bottom: 10px;"><span>Transferencia:</span> <span>${fmtMXN.format(transf)}</span></div><div style="display: flex; justify-content: space-between; align-items: center;"><span style="font-weight: bold; font-size: 16px; color: #1e293b;">TOTAL PAGADO:</span> <span style="font-weight: 900; font-size: 22px; color: #1e3a8a;">${fmtMXN.format(total)}</span></div></div><div style="margin-top: 60px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 15px;"><p style="font-size: 12px; color: #64748b; font-style: italic;">Este documento es un comprobante de pago interno válido en nuestras instalaciones.</p></div></div>`;
-            const opt = { margin: 0, filename: `Remision_${folio}.pdf`, image: { type: 'jpeg', quality: 0.95 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
-            return html2pdf().set(opt).from(d).output('datauristring');
+            const metodo = [['Efectivo', efectivo], ['Tarjeta de crédito', credito], ['Tarjeta de débito', debito], ['Transferencia', transf]].filter(m => m[1] > 0).map(m => m[0]).join(' + ');
+            return pdfNotaRemision({ folio, fecha, nombre: c.paciente, conceptos: [{ cantidad: 1, descripcion: servicio, precio: total }], total, observaciones: '', metodo, atendio: USUARIO_NOMBRE });
         }
 
         // 1) Registra el cobro (el servidor da el folio)  2) genera el PDF con ese folio  3) sube el PDF
@@ -1237,6 +1293,212 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
             }
             abrirRemisiones();
             document.getElementById('inputFechaRemision').value = c.fecha; cargarDatosRemision();
+        }
+
+        // ===== Remisión con el formato impreso de la clínica (media carta, 528 × 816 px) =====
+        const LOGO_REMISION = 'img/logo_remision.png';
+        function htmlNotaRemision(d) {
+            const AZUL = '#1F3B6E', CIELO = '#6EC3E8', PALIDO = '#BFE5F5';
+            const e = (v) => esc(v ?? '');
+            const [anio, mes, dia] = String(d.fecha || '').split('-');
+            const filas = (d.conceptos || []).map(c => {
+                const imp = (parseFloat(c.cantidad) || 0) * (parseFloat(c.precio) || 0);
+                return `<tr><td style="padding:5px 6px;text-align:center;vertical-align:top">${e(c.cantidad)}</td><td style="padding:5px 8px;vertical-align:top;word-break:break-word">${e(c.descripcion)}${parseFloat(c.cantidad) > 1 ? `<span style="color:#6B7B8C;font-size:9px"> · ${fmtMXN.format(parseFloat(c.precio) || 0)} c/u</span>` : ''}</td><td style="padding:5px 8px;text-align:right;vertical-align:top;white-space:nowrap">${fmtMXN.format(imp)}</td></tr>`;
+            }).join('');
+            const pill = (txt, x, y, w) => `<div style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:24px;border:1.5px solid ${AZUL};border-radius:4px;box-shadow:3px 3px 0 ${CIELO};background:#fff;font-size:8.5px;font-weight:600;color:${AZUL};display:flex;align-items:center;justify-content:center;letter-spacing:.3px">${txt}</div>`;
+            const lineaObs = (y, txt) => `<div style="position:absolute;left:40px;top:${y}px;width:451px;height:16px;border-bottom:1px solid #C9D3DD;font-size:10px;color:#1E2B33;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e(txt)}</div>`;
+            const obs = String(d.observaciones || '');
+            const obsLineas = obs.match(/.{1,86}(\s|$)/g) || [];
+            return `<div style="position:relative;width:528px;height:816px;overflow:hidden;background:#fff;font-family:'Montserrat',Arial,sans-serif;color:#1E2B33">
+<svg width="528" height="240" viewBox="0 0 528 240" style="position:absolute;left:0;top:0">
+  <path d="M0,0 H120 C80,22 40,52 0,92 Z" fill="${AZUL}"/>
+  <path d="M120,0 H190 C120,18 60,60 0,128 V92 C40,52 80,22 120,0 Z" fill="${CIELO}"/>
+  <path d="M0,150 C110,214 250,214 360,176 C430,152 480,120 528,82 V110 C470,150 410,186 340,206 C230,238 100,228 0,180 Z" fill="${PALIDO}"/>
+  <path d="M0,128 C110,196 250,200 360,160 C430,134 480,104 528,70 V96 C470,138 410,170 340,192 C230,222 100,214 0,160 Z" fill="${CIELO}"/>
+  <path d="M60,170 C170,212 290,198 380,160 C440,134 490,104 528,86 V112 C480,140 430,172 360,192 C270,218 160,214 60,170 Z" fill="${AZUL}"/>
+</svg>
+<div style="position:absolute;left:24px;top:36px;width:136px;height:136px;border-radius:50%;background:#fff;border:6px solid ${AZUL};overflow:hidden;box-shadow:0 2px 0 ${CIELO}">
+  <div style="position:absolute;left:0;top:12px;width:124px;height:96px;overflow:hidden"><img src="${LOGO_REMISION}" alt="" style="position:absolute;width:172px;max-width:none;height:auto;left:-33px;top:-27px"></div>
+</div>
+<div style="position:absolute;left:176px;top:30px;width:330px;text-align:right;font-weight:800;font-size:25px;letter-spacing:.4px;color:${AZUL}">CLÍNICA DE RODILLAS</div>
+<div style="position:absolute;left:176px;top:60px;width:318px;text-align:right;font-family:'Great Vibes',cursive;font-size:31px;color:${AZUL}">Dr. Díaz Campuzano</div>
+<div style="position:absolute;left:374px;top:196px;width:117px;height:82px;border:1.5px solid ${AZUL};border-radius:8px;overflow:hidden;background:#fff">
+  <div style="background:${AZUL};color:#fff;font-size:12px;font-weight:600;text-align:center;padding:5px 0;letter-spacing:.8px">REMISIÓN</div>
+  <div style="text-align:center;font-weight:700;color:#C0262D;font-size:12px;padding-top:4px">${e(d.folio || '—')}</div>
+  <div style="display:flex;justify-content:space-around;padding:3px 4px 0;font-size:11px;font-weight:600;text-align:center">
+    <div>${e(dia)}<div style="font-size:6.5px;color:${AZUL};font-weight:500;margin-top:1px">DÍA</div></div>
+    <div>${e(mes)}<div style="font-size:6.5px;color:${AZUL};font-weight:500;margin-top:1px">MES</div></div>
+    <div>${e(anio)}<div style="font-size:6.5px;color:${AZUL};font-weight:500;margin-top:1px">AÑO</div></div>
+  </div>
+</div>
+<div style="position:absolute;left:40px;top:262px;font-size:7.5px;font-weight:600;color:${AZUL};border:1px solid ${AZUL};padding:1px 4px;background:#fff">NOMBRE:</div>
+<div style="position:absolute;left:84px;top:256px;width:268px;height:20px;border-bottom:1.5px solid ${AZUL};font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e(d.nombre)}</div>
+<div style="position:absolute;left:374px;top:284px;width:117px;text-align:center;font-size:8.5px;color:${AZUL}">R.F.C DICM8203021M4</div>
+<div style="position:absolute;left:39px;top:304px;width:452px;height:252px;border:1.5px solid ${AZUL};border-radius:8px 8px 0 0;overflow:hidden">
+  <table style="width:100%;border-collapse:collapse;table-layout:fixed;font-size:10.5px">
+    <colgroup><col style="width:72px"><col><col style="width:92px"></colgroup>
+    <thead><tr style="background:${AZUL};color:#fff;font-size:11px;font-weight:500;letter-spacing:.4px"><th style="padding:6px 0;font-weight:500">CANTIDAD</th><th style="padding:6px 0;font-weight:500">DESCRIPCIÓN</th><th style="padding:6px 0;font-weight:500">IMPORTE</th></tr></thead>
+    <tbody>${filas}</tbody>
+  </table>
+  <div style="position:absolute;left:72px;top:27px;bottom:0;border-left:1.5px dashed #8EA3BD"></div>
+  <div style="position:absolute;right:92px;top:27px;bottom:0;border-left:1.5px dashed #8EA3BD"></div>
+</div>
+<div style="position:absolute;left:39px;top:556px;width:347px;height:26px;background:${AZUL};border-radius:0 0 0 8px;color:#fff;font-size:12px;font-weight:600;text-align:right;padding:6px 10px 0 0;letter-spacing:.5px">TOTAL:</div>
+<div style="position:absolute;left:389px;top:556px;width:100px;height:26px;border:1.5px solid ${AZUL};border-radius:0 0 8px 0;font-size:12px;font-weight:700;padding:5px 8px 0;display:flex;justify-content:space-between"><span>$</span><span>${(parseFloat(d.total) || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+<div style="position:absolute;left:40px;top:592px;font-size:7.5px;color:${AZUL}">OBSERVACIONES:</div>
+${lineaObs(602, obsLineas[0])}${lineaObs(618, obsLineas[1])}${lineaObs(634, obsLineas.slice(2).join(' '))}
+${pill('MÉTODO DE PAGO:', 75, 660, 112)}${pill('NOMBRE Y FIRMA:', 334, 660, 112)}
+<div style="position:absolute;left:40px;top:694px;width:202px;height:20px;border-bottom:1.5px solid ${AZUL};text-align:center;font-size:11px;font-weight:600">${e(d.metodo)}</div>
+<div style="position:absolute;left:288px;top:694px;width:203px;height:20px;border-bottom:1.5px solid ${AZUL};text-align:center;font-size:11px;font-weight:600">${e(d.atendio)}</div>
+<div style="position:absolute;left:96px;top:726px;width:340px;font-size:7.6px;font-weight:700;color:${AZUL};line-height:1.45">NOTA:&nbsp; PUEDE SOLICITAR SU FACTURA MÁXIMO EL ÚLTIMO DÍA DEL MES CORRESPONDIENTE.<br>ESTA NOTA FORMA PARTE DE LA FACTURA MENSUAL GLOBAL.</div>
+<svg width="528" height="80" viewBox="0 0 528 80" style="position:absolute;left:0;bottom:0">
+  <path d="M0,4 C60,30 140,52 240,58 C330,63 420,50 528,16 V80 H0 Z" fill="${PALIDO}"/>
+  <path d="M0,30 C80,56 170,70 270,70 C370,70 450,56 528,34 V80 H0 Z" fill="${CIELO}"/>
+  <path d="M0,52 C90,72 200,80 300,78 C400,76 470,64 528,52 V80 H0 Z" fill="${AZUL}"/>
+</svg>
+</div>`;
+        }
+        /** Genera el PDF (media carta) de una remisión con el formato de la clínica. Devuelve data-URI. */
+        async function pdfNotaRemision(d) {
+            if (document.fonts) { try { await Promise.all([document.fonts.load("800 25px Montserrat"), document.fonts.load("31px 'Great Vibes'"), document.fonts.load("600 12px Montserrat")]); } catch (_) {} }
+            const cont = document.createElement('div');
+            cont.style.cssText = 'position:fixed;left:-10000px;top:0';
+            cont.innerHTML = htmlNotaRemision(d);
+            document.body.appendChild(cont);
+            await new Promise(r => { const img = cont.querySelector('img'); if (!img || img.complete) r(); else { img.onload = img.onerror = r; } });
+            try {
+                return await html2pdf().set({ margin: 0, filename: `Remision_${d.folio}.pdf`, image: { type: 'jpeg', quality: 0.96 }, html2canvas: { scale: 3, useCORS: true, backgroundColor: '#ffffff' }, jsPDF: { unit: 'in', format: [5.5, 8.5], orientation: 'portrait' } }).from(cont.firstElementChild).output('datauristring');
+            } finally { cont.remove(); }
+        }
+
+        // ===== Sección Remisiones =====
+        const USUARIO_NOMBRE = <?= json_encode($usuario['nombre'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+        let notaCitas = [], notaIdCita = 0;
+        function abrirNotas() {
+            if (sucursalActual === '') { avisar('Elige primero una sucursal en el menú.'); return; }
+            document.getElementById('subNotas').textContent = `Sucursal ${sucursalActual}`;
+            nuevaNota(); tabNotas('nueva');
+            document.getElementById('modalNotas').classList.remove('hidden');
+            fetch(`obtener_remisiones_dia.php?${new URLSearchParams({ sucursal: sucursalActual, fecha: formatearFechaISO(new Date()) })}`).then(r => r.json()).then(d => {
+                notaCitas = d.status === 'success' ? d.data : [];
+                document.getElementById('notaCitasHoy').innerHTML = notaCitas.map(c => `<option value="${esc(c.paciente)}">${esc(String(c.hora).slice(0, 5))} · ${esc(c.tipo_tratamiento)}</option>`).join('');
+            }).catch(() => {});
+        }
+        function cerrarNotas() { document.getElementById('modalNotas').classList.add('hidden'); }
+        function tabNotas(t) {
+            const nueva = t === 'nueva';
+            document.getElementById('panelNotaNueva').classList.toggle('hidden', !nueva);
+            document.getElementById('panelNotaHist').classList.toggle('hidden', nueva);
+            document.getElementById('tabNotaNueva').className = 'px-3 py-1.5 rounded-md ' + (nueva ? 'bg-white shadow-sm' : 'text-[#4B5A62]');
+            document.getElementById('tabNotaHist').className = 'px-3 py-1.5 rounded-md ' + (!nueva ? 'bg-white shadow-sm' : 'text-[#4B5A62]');
+            if (!nueva) { const f = document.getElementById('histNotaFecha'); if (!f.value) f.value = formatearFechaISO(new Date()); cargarHistNotas(); }
+        }
+        function nuevaNota() {
+            document.getElementById('formNota').reset();
+            document.getElementById('notaFecha').value = formatearFechaISO(new Date());
+            document.getElementById('notaAtendio').value = USUARIO_NOMBRE;
+            document.getElementById('notaConceptos').innerHTML = '';
+            document.getElementById('notaResultado').classList.add('hidden');
+            document.getElementById('btnGuardarNota').disabled = false;
+            notaIdCita = 0; ligarCitaNota(); agregarConceptoNota();
+        }
+        function agregarConceptoNota() {
+            const cont = document.getElementById('notaConceptos');
+            if (cont.children.length >= 12) { avisar('Máximo 12 conceptos por remisión.'); return; }
+            const fila = document.createElement('div');
+            fila.className = 'grid grid-cols-[64px_1fr_110px_100px_32px] gap-2 items-center px-3 py-2 concepto-nota';
+            fila.innerHTML = `<input type="number" min="1" max="999" value="1" required class="c-cant w-full border border-gray-300 rounded-md p-1.5 text-center" aria-label="Cantidad">`
+                + `<input list="notaServicios" maxlength="150" required class="c-desc w-full border border-gray-300 rounded-md p-1.5" placeholder="Descripción" aria-label="Descripción">`
+                + `<input type="number" min="0" step="0.01" required class="c-precio w-full border border-gray-300 rounded-md p-1.5 text-right" placeholder="0.00" aria-label="Precio unitario">`
+                + `<span class="c-imp text-right font-semibold">$0.00</span>`
+                + `<button type="button" onclick="this.parentElement.remove(); previaNota()" class="text-[#6B7B83] hover:text-red-600 text-xl leading-none" aria-label="Quitar concepto">&times;</button>`;
+            cont.appendChild(fila); previaNota();
+            if (cont.children.length > 1) fila.querySelector('.c-desc').focus();
+        }
+        function ligarCitaNota() {
+            const nombre = document.getElementById('notaNombre').value.trim().toLowerCase();
+            const c = notaCitas.find(x => String(x.paciente).trim().toLowerCase() === nombre);
+            notaIdCita = c ? parseInt(c.id_cita) : 0;
+            const p = document.getElementById('notaLigada');
+            p.classList.toggle('hidden', !c);
+            if (c) { p.textContent = `Ligada a su cita de hoy (${String(c.hora).slice(0, 5)}). Se marcará como asistió.`; if (!document.getElementById('notaTel').value && c.telefono) document.getElementById('notaTel').value = c.telefono; }
+        }
+        function datosNota(folio) {
+            const conceptos = [...document.querySelectorAll('.concepto-nota')].map(f => ({ cantidad: parseInt(f.querySelector('.c-cant').value) || 0, descripcion: f.querySelector('.c-desc').value.trim(), precio: parseFloat(f.querySelector('.c-precio').value) || 0 }));
+            return { folio, fecha: document.getElementById('notaFecha').value, nombre: document.getElementById('notaNombre').value.trim(), telefono: document.getElementById('notaTel').value.trim(),
+                     conceptos, total: conceptos.reduce((s, c) => s + c.cantidad * c.precio, 0), observaciones: document.getElementById('notaObs').value.trim(),
+                     metodo: document.getElementById('notaMetodo').value, atendio: document.getElementById('notaAtendio').value.trim() };
+        }
+        function previaNota() {
+            document.querySelectorAll('.concepto-nota').forEach(f => { f.querySelector('.c-imp').textContent = fmtMXN.format((parseInt(f.querySelector('.c-cant').value) || 0) * (parseFloat(f.querySelector('.c-precio').value) || 0)); });
+            const d = datosNota('Folio al guardar');
+            document.getElementById('notaTotal').textContent = fmtMXN.format(d.total);
+            document.getElementById('notaPrevia').innerHTML = htmlNotaRemision(d);
+        }
+        async function guardarNota(ev) {
+            ev.preventDefault();
+            const d = datosNota('');
+            if (d.conceptos.length === 0) { avisar('Agrega al menos un concepto.'); return; }
+            if (d.total <= 0) { avisar('El total debe ser mayor a cero.'); return; }
+            if (!confirm(`¿Guardar remisión de ${fmtMXN.format(d.total)} a ${d.nombre}?`)) return;
+            const btn = document.getElementById('btnGuardarNota'); btn.disabled = true; btn.textContent = 'Guardando…';
+            try {
+                const fd = new FormData();
+                fd.append('sucursal', sucursalActual); fd.append('fecha', d.fecha); fd.append('nombre', d.nombre); fd.append('telefono', d.telefono);
+                fd.append('conceptos', JSON.stringify(d.conceptos)); fd.append('observaciones', d.observaciones); fd.append('metodo_pago', d.metodo);
+                fd.append('atendio', d.atendio); if (notaIdCita) fd.append('id_cita', notaIdCita);
+                const r = await (await fetch('guardar_nota_remision.php', { method: 'POST', body: fd })).json();
+                if (r.status !== 'success') throw new Error(r.message || 'No se pudo guardar.');
+                btn.textContent = 'Generando PDF…';
+                d.folio = r.folio;
+                const fd2 = new FormData(); fd2.append('id_remision', r.id_remision); fd2.append('pdf_data', await pdfNotaRemision(d));
+                const r2 = await (await fetch('adjuntar_pdf_remision.php', { method: 'POST', body: fd2 })).json();
+                const res = document.getElementById('notaResultado');
+                res.innerHTML = r2.status === 'success'
+                    ? `<p class="font-bold text-[#0A5E4D] mb-2">Remisión ${esc(r.folio)} guardada.</p><div class="flex flex-wrap gap-2"><a href="${esc(r2.pdf)}" target="_blank" class="bg-[#0E7C66] text-white font-semibold rounded-lg px-3 py-2 text-sm">Ver / imprimir PDF</a>${d.telefono ? `<a href="${esc(r2.wa_link)}" target="_blank" class="bg-[#25D366] text-white font-semibold rounded-lg px-3 py-2 text-sm">Enviar por WhatsApp</a>` : ''}<button type="button" onclick="nuevaNota()" class="border border-gray-300 font-semibold rounded-lg px-3 py-2 text-sm">Nueva remisión</button></div>`
+                    : `<p class="font-bold text-red-700">El cobro quedó con folio ${esc(r.folio)}, pero el PDF no se guardó: ${esc(r2.message)}. Puedes generarlo desde Historial.</p>`;
+                res.classList.remove('hidden');
+                btn.textContent = 'Guardada'; previaNota();
+                document.getElementById('notaPrevia').innerHTML = htmlNotaRemision(d);
+                cargarCitas(sucursalActual, '');
+            } catch (e) {
+                avisar(e.message || 'Error de conexión.'); btn.disabled = false; btn.textContent = 'Guardar y generar PDF';
+            }
+        }
+        let histNotas = [];
+        function cargarHistNotas() {
+            const q = document.getElementById('histNotaBuscar').value.trim();
+            const cont = document.getElementById('listaHistNotas');
+            cont.innerHTML = '<p class="text-[#6B7B83] text-sm">Cargando…</p>';
+            const params = { sucursal: sucursalActual }; if (q) params.q = q; else params.fecha = document.getElementById('histNotaFecha').value;
+            fetch(`obtener_notas_remision.php?${new URLSearchParams(params)}`).then(r => r.json()).then(d => {
+                if (d.status !== 'success') { cont.innerHTML = `<p class="text-red-600 text-sm">${esc(d.message)}</p>`; return; }
+                histNotas = d.data;
+                cont.innerHTML = histNotas.length ? histNotas.map((n, i) => {
+                    const canc = n.estado === 'Cancelada';
+                    return `<div class="flex flex-wrap items-center gap-3 border border-gray-200 rounded-xl px-4 py-3 ${canc ? 'opacity-60' : ''}">
+                        <span class="font-mono text-sm font-bold text-[#0A5E4D] w-24">${esc(n.folio)}</span>
+                        <div class="flex-1 min-w-[180px]"><p class="font-semibold">${esc(n.paciente)}${canc ? ' <span class="text-xs text-red-600 font-bold">CANCELADA</span>' : ''}</p><p class="text-xs text-[#6B7B83] truncate">${esc(n.fecha)} · ${esc(n.servicio)}${n.metodo_pago ? ' · ' + esc(n.metodo_pago) : ''}</p></div>
+                        <span class="font-extrabold">${fmtMXN.format(parseFloat(n.total) || 0)}</span>
+                        ${n.ruta_archivo ? `<a href="ver_archivo.php?f=${encodeURIComponent(n.ruta_archivo)}" target="_blank" class="text-sm font-semibold text-[#0E7C66] hover:underline">Ver / imprimir</a>` : ''}
+                        ${!canc ? `<button onclick="regenerarNota(${i}, this)" class="text-sm font-semibold text-[#4B5A62] hover:underline">${n.ruta_archivo ? 'Rehacer PDF' : 'Generar PDF'}</button>` : ''}
+                    </div>`;
+                }).join('') : '<p class="text-[#6B7B83] text-sm">No hay remisiones con ese filtro.</p>';
+            }).catch(() => { cont.innerHTML = '<p class="text-red-600 text-sm">Error de conexión.</p>'; });
+        }
+        /** Vuelve a generar el PDF con el formato de la clínica (útil para cobros anteriores o si falló la subida). */
+        async function regenerarNota(i, btn) {
+            const n = histNotas[i]; if (!n) return;
+            const metodo = n.metodo_pago || (['efectivo', 'credito', 'debito', 'transferencia'].filter(k => parseFloat(n[k]) > 0).map(k => ({ efectivo: 'Efectivo', credito: 'Tarjeta de crédito', debito: 'Tarjeta de débito', transferencia: 'Transferencia' })[k]).join(' + '));
+            const conceptos = n.conceptos.length ? n.conceptos : [{ cantidad: 1, descripcion: n.servicio, precio: n.total }];
+            btn.disabled = true; btn.textContent = 'Generando…';
+            try {
+                const pdf = await pdfNotaRemision({ folio: n.folio, fecha: n.fecha, nombre: n.paciente, conceptos, total: n.total, observaciones: n.observaciones || '', metodo, atendio: n.atendio || n.usuario || '' });
+                const fd = new FormData(); fd.append('id_remision', n.id_remision); fd.append('pdf_data', pdf);
+                const r = await (await fetch('adjuntar_pdf_remision.php', { method: 'POST', body: fd })).json();
+                if (r.status !== 'success') throw new Error(r.message);
+                window.open(r.pdf, '_blank'); cargarHistNotas();
+            } catch (e) { avisar(e.message || 'No se pudo generar el PDF.'); btn.disabled = false; btn.textContent = 'Generar PDF'; }
         }
 
         // ===== Cámara Hiperbárica =====

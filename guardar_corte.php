@@ -36,7 +36,7 @@ try {
         foreach ($t as $k => $_) {
             $t[$k] += (float)$r[$k];
         }
-        $citas[$r['id_cita']] = true;
+        $citas[$r['id_cita'] ?: 'r' . $r['id_remision']] = true;
     }
     $folioIni = $rems ? $rems[0]['folio'] : null;
     $folioFin = $rems ? $rems[count($rems) - 1]['folio'] : null;

@@ -37,6 +37,30 @@ const SERVICIO_HIPERBARICA = 'Cámara Hiperbárica';
 const MODALIDADES_HIPER = ['Valoración médica', 'Sesión individual', 'Paquete de sesiones'];
 const MOTIVOS_HIPER = ['Pie diabético y heridas', 'Post-operatorio y estética', 'Recuperación deportiva', 'Bienestar y adultos mayores', 'Otro'];
 
+const METODOS_PAGO = ['Efectivo' => 'efectivo', 'Tarjeta de crédito' => 'credito', 'Tarjeta de débito' => 'debito', 'Transferencia' => 'transferencia'];
+
+/** ¿Existe la columna? (para que el sistema funcione antes de importar una migración) */
+function tiene_columna(PDO $pdo, string $tabla, string $columna): bool
+{
+    static $cache = [];
+    $k = "$tabla.$columna";
+    if (!isset($cache[$k])) {
+        $st = $pdo->prepare('SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?');
+        $st->execute([$tabla, $columna]);
+        $cache[$k] = (int)$st->fetchColumn() > 0;
+    }
+    return $cache[$k];
+}
+
+/** Siguiente folio de la sucursal (DV-000001). Llamar DENTRO de una transacción. */
+function siguiente_folio(PDO $pdo, int $idSucursal, string $clave): string
+{
+    $pdo->prepare('INSERT IGNORE INTO folios (id_sucursal, ultimo) VALUES (?, 0)')->execute([$idSucursal]);
+    $pdo->prepare('UPDATE folios SET ultimo = LAST_INSERT_ID(ultimo + 1) WHERE id_sucursal = ?')->execute([$idSucursal]);
+    $n = (int)$pdo->query('SELECT LAST_INSERT_ID()')->fetchColumn();
+    return $clave . '-' . str_pad((string)$n, 6, '0', STR_PAD_LEFT);
+}
+
 /** ¿Ya se importó migracion_v7? (así el sistema no falla si se publica antes de importarla) */
 function tiene_campos_hiper(PDO $pdo): bool
 {

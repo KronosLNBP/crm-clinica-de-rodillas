@@ -44,10 +44,7 @@ try {
     }
 
     $pdo->beginTransaction();
-    $pdo->prepare('INSERT IGNORE INTO folios (id_sucursal, ultimo) VALUES (?, 0)')->execute([$cita['id_sucursal']]);
-    $pdo->prepare('UPDATE folios SET ultimo = LAST_INSERT_ID(ultimo + 1) WHERE id_sucursal = ?')->execute([$cita['id_sucursal']]);
-    $consecutivo = (int)$pdo->query('SELECT LAST_INSERT_ID()')->fetchColumn();
-    $folio = $cita['clave'] . '-' . str_pad((string)$consecutivo, 6, '0', STR_PAD_LEFT);
+    $folio = siguiente_folio($pdo, (int)$cita['id_sucursal'], $cita['clave']);
 
     $st = $pdo->prepare(
         'INSERT INTO remisiones_clientes (id_cita, folio, paciente, telefono, sucursal, id_sucursal, servicio,

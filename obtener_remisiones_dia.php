@@ -27,7 +27,15 @@ try {
     $st2 = $pdo->prepare('SELECT id_corte, fecha_registro FROM cortes_diarios WHERE sucursal = ? AND fecha = ?');
     $st2->execute([$sucursal, $fecha]);
 
-    responder(['status' => 'success', 'data' => $st->fetchAll(), 'corte' => $st2->fetch() ?: null]);
+    $st3 = $pdo->prepare(
+        "SELECT r.id_remision, r.folio, r.paciente, r.servicio, r.efectivo, r.credito, r.debito, r.transferencia, r.total, r.ruta_archivo
+           FROM remisiones_clientes r JOIN sucursales s ON s.id_sucursal = r.id_sucursal
+          WHERE s.nombre_sucursal = ? AND r.fecha = ? AND r.id_cita IS NULL AND r.estado = 'Vigente'
+          ORDER BY r.id_remision"
+    );
+    $st3->execute([$sucursal, $fecha]);
+
+    responder(['status' => 'success', 'data' => $st->fetchAll(), 'sueltas' => $st3->fetchAll(), 'corte' => $st2->fetch() ?: null]);
 } catch (Throwable $e) {
     error_servidor($e);
 }
