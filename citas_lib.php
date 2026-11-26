@@ -71,3 +71,35 @@ function datos_cita_desde_post(PDO $pdo, array $u, int $idCitaActual = 0): array
         ':es_express' => $estado === 'Express' ? 1 : 0,
     ];
 }
+
+/** Campos de Cámara Hiperbárica (solo si el tratamiento es ese y ya existe la migración v7). */
+function datos_hiperbarica(PDO $pdo, string $tipo): array
+{
+    if ($tipo !== SERVICIO_HIPERBARICA || !tiene_campos_hiper($pdo)) {
+        return [];
+    }
+    $modalidad = txt($_POST, 'modalidad', 30) ?: 'Valoración médica';   // la app aún no manda este campo
+    $sesiones  = txt($_POST, 'sesiones_paquete', 3);
+    $motivo    = txt($_POST, 'motivo_consulta', 80);
+    $referido  = preg_replace('/\s+/', ' ', txt($_POST, 'referido_por', 120));
+
+    if (!in_array($modalidad, MODALIDADES_HIPER, true)) error_usuario('Elige la modalidad de Cámara Hiperbárica (valoración, sesión o paquete).');
+    if ($motivo !== '' && !in_array($motivo, MOTIVOS_HIPER, true)) error_usuario('Motivo de consulta no válido.');
+    $nSes = null;
+    if ($modalidad === 'Paquete de sesiones') {
+        if (!ctype_digit($sesiones) || (int)$sesiones < 2 || (int)$sesiones > 60) error_usuario('Indica cuántas sesiones tiene el paquete (2 a 60).');
+        $nSes = (int)$sesiones;
+    }
+    return [':modalidad' => $modalidad, ':sesiones_paquete' => $nSes, ':motivo_consulta' => $motivo ?: null, ':referido_por' => $referido ?: null];
+}
+
+/** La terapia requiere valoración médica previa: avisa si el paciente no tiene ninguna sesión o valoración de cámara a la que haya asistido. */
+function aviso_valoracion(PDO $pdo, int $idPaciente, array $hiper, int $idCitaActual = 0): ?string
+{
+    if (!$hiper || $hiper[':modalidad'] === 'Valoración médica') {
+        return null;
+    }
+    $st = $pdo->prepare("SELECT 1 FROM citas WHERE id_paciente = ? AND id_cita <> ? AND tipo_tratamiento = ? AND asistencia = 'Asistió' AND estado <> 'Cancelada' LIMIT 1");
+    $st->execute([$idPaciente, $idCitaActual, SERVICIO_HIPERBARICA]);
+    return $st->fetchColumn() ? null : 'Este paciente no tiene valoración médica de Cámara Hiperbárica registrada, y la terapia la requiere.';
+}

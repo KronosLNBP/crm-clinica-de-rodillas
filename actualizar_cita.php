@@ -27,15 +27,22 @@ try {
             responder(['status' => 'advertencia', 'message' => $aviso]);
         }
     }
+    $hiper = datos_hiperbarica($pdo, $d[':tipo']);
+    $cambioModalidad = $hiper && (($antes['tipo_tratamiento'] ?? '') !== SERVICIO_HIPERBARICA || ($antes['modalidad'] ?? null) !== $hiper[':modalidad']);
+    if ($cambioModalidad && ($_POST['forzar'] ?? '') !== '1' && ($av = aviso_valoracion($pdo, $d[':id_paciente'], $hiper, $idCita))) {
+        responder(['status' => 'advertencia', 'message' => $av]);
+    }
+    $setExtra = $hiper ? ', modalidad = :modalidad, sesiones_paquete = :sesiones_paquete, motivo_consulta = :motivo_consulta, referido_por = :referido_por' : '';
+    $d += $hiper;
     $d[':id_cita'] = $idCita;
 
     $st = $pdo->prepare(
-        'UPDATE citas SET fecha = :fecha, hora = :hora, paciente = :paciente, telefono = :telefono,
+        "UPDATE citas SET fecha = :fecha, hora = :hora, paciente = :paciente, telefono = :telefono,
                 edad = :edad, estado = :estado, asistencia = :asistencia, ya_es_paciente = :ya_es_paciente,
                 tipo_tratamiento = :tipo, asistente = :asistente, sucursal = :sucursal,
                 id_paciente = :id_paciente, id_sucursal = :id_sucursal, id_servicio = :id_servicio,
-                es_express = :es_express
-          WHERE id_cita = :id_cita'
+                es_express = :es_express$setExtra
+          WHERE id_cita = :id_cita"
     );
     $st->execute($d);
     bitacora($pdo, $u['id'], 'citas', $idCita, 'editar', $antes, $d);

@@ -13,7 +13,8 @@ $hasta    = txt($_GET, 'hasta', 10);
 
 try {
     $sql = "SELECT c.id_cita, c.id_paciente, c.fecha, c.hora, c.paciente, c.telefono, c.edad, c.estado, c.ya_es_paciente,
-                   c.tipo_tratamiento, c.asistente, c.sucursal, c.asistencia, p.fecha_nacimiento, p.procedencia
+                   c.tipo_tratamiento, c.asistente, c.sucursal, c.asistencia, p.fecha_nacimiento, p.procedencia"
+         . (tiene_campos_hiper($pdo) ? ', c.modalidad, c.sesiones_paquete, c.motivo_consulta, c.referido_por' : '') . "
               FROM citas c LEFT JOIN pacientes p ON p.id_paciente = c.id_paciente
              WHERE c.estado <> 'Cancelada'";
     $p = [];

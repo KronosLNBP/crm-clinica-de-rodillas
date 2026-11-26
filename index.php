@@ -516,7 +516,18 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
                 <datalist id="listaProcedencias"><option>Ciudad de México</option><option>Estado de México</option><option>Hidalgo</option><option>Puebla</option><option>Tlaxcala</option><option>Morelos</option><option>Querétaro</option><option>Veracruz</option><option>Guerrero</option><option>Otro estado</option><option>Extranjero</option></datalist>
                 <div><label class="block text-sm font-medium text-gray-700">Paciente</label><input type="text" name="paciente" id="inputPaciente" required class="mt-1 block w-full border border-gray-300 rounded-md p-2"></div>
                 <div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700">Teléfono</label><input type="tel" name="telefono" id="inputTelefono" required class="mt-1 block w-full border border-gray-300 rounded-md p-2"></div><div><label class="block text-sm font-medium text-gray-700">¿Ya es paciente?</label><select name="ya_es_paciente" id="inputYaPaciente" class="mt-1 block w-full border border-gray-300 rounded-md p-2"><option value="No">No</option><option value="Si">Sí</option></select></div></div>
-                <div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700">Tipo (Tratamiento)</label><select name="tipo" id="inputTipo" class="mt-1 block w-full border border-gray-300 rounded-md p-2"><option value="Sports medicine">Sports medicine</option><option value="Clínica de rodillas">Clínica de rodillas</option><option value="Cámara Hiperbárica">Cámara Hiperbárica</option></select></div><div><label class="block text-sm font-medium text-gray-700">Sucursal</label><select name="sucursal" id="inputSucursal" class="mt-1 block w-full border border-gray-300 rounded-md p-2"><?= $opcionesSucursal ?></select></div></div>
+                <div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700">Tipo (Tratamiento)</label><select name="tipo" id="inputTipo" onchange="mostrarBloqueHiper()" class="mt-1 block w-full border border-gray-300 rounded-md p-2"><option value="Sports medicine">Sports medicine</option><option value="Clínica de rodillas">Clínica de rodillas</option><option value="Cámara Hiperbárica">Cámara Hiperbárica</option></select></div><div><label class="block text-sm font-medium text-gray-700">Sucursal</label><select name="sucursal" id="inputSucursal" class="mt-1 block w-full border border-gray-300 rounded-md p-2"><?= $opcionesSucursal ?></select></div></div>
+                <div id="bloqueHiper" class="hidden rounded-xl border border-[#BFE3CD] bg-[#F1FAF7] p-3 space-y-3">
+                    <p class="text-sm font-bold text-[#0A5E4D]">🫁 Cámara Hiperbárica <span class="font-normal text-[#4B5A62]">· la terapia requiere valoración médica previa</span></p>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="block text-sm font-medium text-gray-700" for="inputModalidad">Modalidad</label><select name="modalidad" id="inputModalidad" onchange="mostrarBloqueHiper()" class="mt-1 block w-full border border-gray-300 rounded-md p-2 bg-white"><option value="Valoración médica">Valoración médica</option><option value="Sesión individual">Sesión individual</option><option value="Paquete de sesiones">Paquete de sesiones</option></select></div>
+                        <div id="campoSesiones"><label class="block text-sm font-medium text-gray-700" for="inputSesiones">Sesiones del paquete</label><input type="number" name="sesiones_paquete" id="inputSesiones" min="2" max="60" placeholder="Ej. 10" class="mt-1 block w-full border border-gray-300 rounded-md p-2"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="block text-sm font-medium text-gray-700" for="inputMotivo">Motivo de consulta</label><select name="motivo_consulta" id="inputMotivo" class="mt-1 block w-full border border-gray-300 rounded-md p-2 bg-white"><option value="">Sin especificar</option><option>Pie diabético y heridas</option><option>Post-operatorio y estética</option><option>Recuperación deportiva</option><option>Bienestar y adultos mayores</option><option>Otro</option></select></div>
+                        <div><label class="block text-sm font-medium text-gray-700" for="inputReferido">Lo envía (médico, opcional)</label><input type="text" name="referido_por" id="inputReferido" maxlength="120" placeholder="Ej. Dr. Pérez" class="mt-1 block w-full border border-gray-300 rounded-md p-2"></div>
+                    </div>
+                </div>
                 <div><label class="block text-sm font-medium text-gray-700">Asistente</label><input type="text" name="asistente" id="inputAsistente" class="mt-1 block w-full border border-gray-300 rounded-md p-2"></div>
                 
                 <div id="botonesEdicion" class="grid grid-cols-2 gap-2 mt-4 w-full">
@@ -735,7 +746,7 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
             const paciente = document.getElementById('inputPaciente').value; const tratamiento = document.getElementById('inputTipo').value; const idCita = document.getElementById('inputIdCita').value; if(!paciente) return;
             document.getElementById('txt-carnet-nombre').innerText = paciente; document.getElementById('txt-carnet-tratamiento').innerText = tratamiento; document.getElementById('inputExpedienteCarnet').value = `CR-${new Date().getFullYear()}-${idCita.padStart(4, '0')}`; document.getElementById('inputDiagCarnet').value = ''; document.getElementById('inputMedicoCarnet').value = '';
             fetch(`obtener_perfil_paciente.php?id_cita=${encodeURIComponent(idCita)}`).then(res => res.json()).then(data => {
-                let asistencias = 0; if(data.status === 'success') { asistencias = data.data.asistencias; document.getElementById('inputExpedienteCarnet').value = data.data.folio; } document.getElementById('inputTomadasCarnet').value = asistencias; document.getElementById('inputTotalesCarnet').value = 10; dibujarCarnetVisual(); document.getElementById('modalCarnet').classList.remove('hidden');
+                let asistencias = 0; if(data.status === 'success') { asistencias = data.data.asistencias; document.getElementById('inputExpedienteCarnet').value = data.data.folio; } document.getElementById('inputTomadasCarnet').value = asistencias; document.getElementById('inputTotalesCarnet').value = (([...citasGlobales, ...(typeof citasDirectorio !== 'undefined' ? citasDirectorio : [])].find(x => x.id_cita == idCita) || {}).sesiones_paquete) || 10; dibujarCarnetVisual(); document.getElementById('modalCarnet').classList.remove('hidden');
             });
         }
         function cerrarCarnet() { document.getElementById('modalCarnet').classList.add('hidden'); }
@@ -1035,14 +1046,14 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
 
         function abrirModalNueva(fecha, hora) {
             document.getElementById('modalCita').classList.remove('hidden'); document.getElementById('tituloModal').innerText = "Agendar Nueva Cita"; document.getElementById('inputIdCita').value = ""; document.getElementById('formCita').reset(); document.getElementById('checkSiAsistio').checked = false; document.getElementById('checkNoAsistio').checked = false; document.getElementById('inputFecha').value = fecha; document.getElementById('inputHora').value = hora;
-            if(sucursalActual !== '') document.getElementById('inputSucursal').value = sucursalActual; if(tipoTratamientoActual !== '') document.getElementById('inputTipo').value = tipoTratamientoActual;
+            if(sucursalActual !== '') document.getElementById('inputSucursal').value = sucursalActual; if(tipoTratamientoActual !== '') document.getElementById('inputTipo').value = tipoTratamientoActual; mostrarBloqueHiper();
             document.getElementById('botonesEdicion').classList.add('hidden'); document.getElementById('btnGuardar').classList.remove('w-full'); document.getElementById('btnGuardar').classList.add('w-full'); document.getElementById('btnGuardar').innerText = "Guardar Cita"; document.getElementById('mensaje').classList.add('hidden');
         }
 
         function abrirModalEditar(cita) {
             document.getElementById('modalCita').classList.remove('hidden'); document.getElementById('tituloModal').innerText = "Editar Cita"; document.getElementById('checkSiAsistio').checked = false; document.getElementById('checkNoAsistio').checked = false;
             if (cita.asistencia === 'Asistió') document.getElementById('checkSiAsistio').checked = true; else if (cita.asistencia === 'No Asistió') document.getElementById('checkNoAsistio').checked = true;
-            document.getElementById('inputIdCita').value = cita.id_cita; document.getElementById('inputFecha').value = cita.fecha; document.getElementById('inputHora').value = cita.hora.substring(0, 5); document.getElementById('inputEstado').value = cita.estado; document.getElementById('inputPaciente').value = cita.paciente; document.getElementById('inputTelefono').value = cita.telefono; document.getElementById('inputEdad').value = cita.edad ?? ''; document.getElementById('inputFechaNac').value = cita.fecha_nacimiento || ''; document.getElementById('inputProcedencia').value = cita.procedencia || ''; document.getElementById('inputYaPaciente').value = cita.ya_es_paciente; document.getElementById('inputTipo').value = cita.tipo_tratamiento; document.getElementById('inputAsistente').value = cita.asistente || ''; document.getElementById('inputSucursal').value = cita.sucursal;
+            document.getElementById('inputIdCita').value = cita.id_cita; document.getElementById('inputFecha').value = cita.fecha; document.getElementById('inputHora').value = cita.hora.substring(0, 5); document.getElementById('inputEstado').value = cita.estado; document.getElementById('inputPaciente').value = cita.paciente; document.getElementById('inputTelefono').value = cita.telefono; document.getElementById('inputEdad').value = cita.edad ?? ''; document.getElementById('inputFechaNac').value = cita.fecha_nacimiento || ''; document.getElementById('inputProcedencia').value = cita.procedencia || ''; document.getElementById('inputYaPaciente').value = cita.ya_es_paciente; document.getElementById('inputTipo').value = cita.tipo_tratamiento; document.getElementById('inputAsistente').value = cita.asistente || ''; document.getElementById('inputSucursal').value = cita.sucursal; document.getElementById('inputModalidad').value = cita.modalidad || 'Valoración médica'; document.getElementById('inputSesiones').value = cita.sesiones_paquete || ''; document.getElementById('inputMotivo').value = cita.motivo_consulta || ''; document.getElementById('inputReferido').value = cita.referido_por || ''; mostrarBloqueHiper();
             document.getElementById('botonesEdicion').classList.remove('hidden'); document.getElementById('btnPerfil').classList.remove('hidden'); document.getElementById('btnCarnet').classList.remove('hidden'); document.getElementById('btnSubsecuente').classList.remove('hidden');
             const btnEliminar = document.getElementById('btnEliminar'); btnEliminar.classList.remove('hidden');
             if (cita.asistencia === 'Asistió') { btnEliminar.disabled = true; btnEliminar.classList.add('opacity-50', 'cursor-not-allowed'); } else { btnEliminar.disabled = false; btnEliminar.classList.remove('opacity-50', 'cursor-not-allowed'); }
@@ -1200,7 +1211,7 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
                         <span class="w-1.5 self-stretch rounded-full" style="background:${COLOR_SUC[c.sucursal] || '#6B7B83'}"></span>
                         <button onclick="abrirModalEditar(citasGlobales.find(x => x.id_cita == ${parseInt(c.id_cita)}))" class="flex-1 min-w-[12rem] text-left">
                             <p class="text-lg font-bold leading-tight">${esc(c.paciente)} ${c.estado === 'Express' ? '<span class="text-xs font-bold text-[#8A5A12]">⚡ sin cita</span>' : ''}</p>
-                            <p class="text-sm text-[#6B7B83]">${esc(c.tipo_tratamiento)}${sucursalActual ? '' : ', ' + esc(c.sucursal)} ${nuevo}</p>
+                            <p class="text-sm text-[#6B7B83]">${esc(c.tipo_tratamiento)}${esc(detalleHiper(c))}${sucursalActual ? '' : ', ' + esc(c.sucursal)} ${nuevo}</p>
                         </button>
                         ${estado}
                         <div class="solo-operacion flex gap-2">
@@ -1228,17 +1239,29 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
             document.getElementById('inputFechaRemision').value = c.fecha; cargarDatosRemision();
         }
 
+        // ===== Cámara Hiperbárica =====
+        function mostrarBloqueHiper() {
+            const esHiper = document.getElementById('inputTipo').value === 'Cámara Hiperbárica';
+            document.getElementById('bloqueHiper').classList.toggle('hidden', !esHiper);
+            document.getElementById('campoSesiones').classList.toggle('invisible', document.getElementById('inputModalidad').value !== 'Paquete de sesiones');
+        }
+        function detalleHiper(c) {
+            if (c.tipo_tratamiento !== 'Cámara Hiperbárica' || !c.modalidad) return '';
+            const m = c.modalidad === 'Paquete de sesiones' ? `Paquete de ${c.sesiones_paquete || '?'} sesiones` : c.modalidad;
+            return ` · ${m}${c.motivo_consulta ? ' · ' + c.motivo_consulta : ''}`;
+        }
+
         // ===== Mensaje de confirmación para el paciente (copiar / WhatsApp) =====
         function datosDeFormulario(fd) {
             const g = (k) => (fd instanceof FormData ? fd.get(k) : document.querySelector(`#formCita [name="${k}"]`)?.value) || '';
-            return { paciente: g('paciente'), telefono: g('telefono'), fecha: g('fecha'), hora: g('hora'), sucursal: g('sucursal'), tipo: g('tipo') };
+            return { paciente: g('paciente'), telefono: g('telefono'), fecha: g('fecha'), hora: g('hora'), sucursal: g('sucursal'), tipo: g('tipo'), modalidad: g('modalidad'), sesiones: g('sesiones_paquete') };
         }
         function textoConfirmacion(d) {
             const f = new Date(d.fecha + 'T12:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
             const [hh, mm] = (d.hora || '00:00').split(':').map(Number);
             const hora = `${((hh + 11) % 12) + 1}:${String(mm).padStart(2, '0')} ${hh < 12 ? 'a. m.' : 'p. m.'}`;
             return `Hola ${d.paciente.split(' ')[0]} 👋, tu cita en Clínica de Rodillas quedó agendada:\n\n`
-                 + `📅 ${f.charAt(0).toUpperCase() + f.slice(1)}\n⏰ ${hora}\n📍 Sucursal ${d.sucursal}\n🩺 ${d.tipo}\n\n`
+                 + `📅 ${f.charAt(0).toUpperCase() + f.slice(1)}\n⏰ ${hora}\n📍 Sucursal ${d.sucursal}\n🩺 ${d.tipo}${d.tipo === 'Cámara Hiperbárica' && d.modalidad ? ' — ' + d.modalidad + (d.modalidad === 'Paquete de sesiones' && d.sesiones ? ' (' + d.sesiones + ' sesiones)' : '') : ''}\n\n`
                  + `Te pedimos llegar 10 minutos antes. Si necesitas cambiarla, responde a este mensaje. ¡Te esperamos!`;
         }
         // silencioso = copia automática al guardar: si el navegador no lo permite, no molesta (queda el botón Copiar)

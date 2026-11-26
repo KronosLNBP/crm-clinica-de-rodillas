@@ -33,6 +33,20 @@ const ROLES_OPERACION = ['admin', 'asistente'];
 const ROLES_CLINICOS  = ['admin', 'asistente'];
 const ROLES_ADMIN     = ['admin'];
 
+const SERVICIO_HIPERBARICA = 'Cámara Hiperbárica';
+const MODALIDADES_HIPER = ['Valoración médica', 'Sesión individual', 'Paquete de sesiones'];
+const MOTIVOS_HIPER = ['Pie diabético y heridas', 'Post-operatorio y estética', 'Recuperación deportiva', 'Bienestar y adultos mayores', 'Otro'];
+
+/** ¿Ya se importó migracion_v7? (así el sistema no falla si se publica antes de importarla) */
+function tiene_campos_hiper(PDO $pdo): bool
+{
+    static $si = null;
+    if ($si === null) {
+        $si = (int)$pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'citas' AND COLUMN_NAME = 'modalidad'")->fetchColumn() > 0;
+    }
+    return $si;
+}
+
 function rol_normalizado(string $rol): string
 {
     return $rol === 'admin' ? 'admin' : 'asistente';
