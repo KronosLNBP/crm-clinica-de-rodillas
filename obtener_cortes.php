@@ -2,7 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/auth.php';
 
-$u = requiere_staff_api();
+$u = requiere_staff_api(ROLES_ADMIN);
 
 $sucursal = sucursal_permitida($pdo, $u, txt($_GET, 'sucursal', 100));
 $inicio   = txt($_GET, 'fecha_inicio', 10);

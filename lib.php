@@ -26,9 +26,17 @@ set_exception_handler(function (Throwable $e): void {
 const ESTADOS_CITA =['Agendado', 'Confirmada', 'Express', 'Reagendada', 'Completada']; // 'Cancelada' solo vía eliminar_cita.php
 const ASISTENCIAS  = ['Pendiente', 'Asistió', 'No Asistió'];
 const MAX_PDF_BYTES = 5 * 1024 * 1024;
-const ROLES_OPERACION = ['admin', 'recepcion', 'medico', 'terapeuta'];   // pueden modificar
-const ROLES_CLINICOS  = ['admin', 'medico', 'terapeuta'];                // ven/escriben notas clínicas
-// 'contabilidad' = solo consulta (cortes, remisiones, agenda)
+// Solo dos roles (migracion_v6):
+//  - asistente: citas, asistencia, cobros, pacientes, expediente y notas, cumpleaños, ausencias
+//  - admin: todo + corte de caja, historial de cortes, cancelar recibos, usuarios y horarios
+const ROLES_OPERACION = ['admin', 'asistente'];
+const ROLES_CLINICOS  = ['admin', 'asistente'];
+const ROLES_ADMIN     = ['admin'];
+
+function rol_normalizado(string $rol): string
+{
+    return $rol === 'admin' ? 'admin' : 'asistente';
+}
 
 function cfg(string $clave): string
 {

@@ -1,5 +1,5 @@
 <?php
-// Notas clínicas del médico/terapeuta para el paciente de una cita (recepción y contabilidad no las ven).
+// Notas clínicas del médico/terapeuta para el paciente de una cita (admin y asistentes).
 declare(strict_types=1);
 require_once __DIR__ . '/auth.php';
 

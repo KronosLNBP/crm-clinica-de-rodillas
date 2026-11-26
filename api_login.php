@@ -37,10 +37,10 @@ try {
     responder([
         'status'   => 'success',
         'token'    => $token,
-        'usuario'  => ['nombre' => $u['nombre'], 'rol' => $u['rol'], 'sucursal_fija' => $fija['nombre_sucursal'] ?? null],
+        'usuario'  => ['nombre' => $u['nombre'], 'rol' => rol_normalizado((string)$u['rol']), 'sucursal_fija' => $fija['nombre_sucursal'] ?? null],
         'sucursales' => $sucursales,
         'servicios'  => $servicios,
-        'puede_operar' => in_array($u['rol'], ROLES_OPERACION, true),
+        'puede_operar' => in_array(rol_normalizado((string)$u['rol']), ROLES_OPERACION, true),
     ]);
 } catch (Throwable $e) {
     error_servidor($e);

@@ -4,7 +4,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/auth.php';
 
-$u = requiere_staff_api(ROLES_OPERACION);
+$u = requiere_staff_api(ROLES_ADMIN);
 solo_post();
 
 $sucursal = sucursal_permitida($pdo, $u, txt($_POST, 'sucursal', 100));

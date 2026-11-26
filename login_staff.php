@@ -29,7 +29,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 $_SESSION['staff'] = [
                     'id'          => (int)$u['id_usuario'],
                     'nombre'      => $u['nombre'],
-                    'rol'         => $u['rol'],
+                    'rol'         => rol_normalizado((string)$u['rol']),
                     'id_sucursal' => $u['id_sucursal'] !== null ? (int)$u['id_sucursal'] : null,
                 ];
                 $_SESSION['staff_ultimo'] = time();

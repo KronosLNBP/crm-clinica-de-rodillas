@@ -16,7 +16,7 @@ foreach ($pdo->query('SELECT id_sucursal, dia_semana, TIME_FORMAT(hora_inicio,"%
     $horarios[$h['id_sucursal']][$h['dia_semana']] = $h;
 }
 $dias  = [1 => 'Lunes', 2 => 'Martes', 3 => 'Miércoles', 4 => 'Jueves', 5 => 'Viernes', 6 => 'Sábado', 0 => 'Domingo'];
-$roles = ['recepcion' => 'Recepción', 'medico' => 'Médico', 'terapeuta' => 'Terapeuta', 'contabilidad' => 'Contabilidad (solo consulta)', 'admin' => 'Administrador'];
+$roles = ['asistente' => 'Asistente (citas, cobros, pacientes y cumpleaños)', 'admin' => 'Administrador (todo, incluye cortes y usuarios)'];
 $e = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES);
 ?>
 <!DOCTYPE html>
@@ -131,7 +131,7 @@ $e = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES);
         document.getElementById('ayudaPass').innerText = u ? '(déjala vacía para no cambiarla)' : '(mín. 8)';
         f.id_usuario.value = u ? u.id_usuario : '';
         f.nombre.value = u ? u.nombre : ''; f.usuario.value = u ? u.usuario : '';
-        f.rol.value = u ? u.rol : 'recepcion'; f.id_sucursal.value = u && u.id_sucursal ? u.id_sucursal : '';
+        f.rol.value = u ? u.rol : 'asistente'; f.id_sucursal.value = u && u.id_sucursal ? u.id_sucursal : '';
         f.activo.checked = u ? u.activo == 1 : true;
         document.getElementById('modalUsuario').classList.remove('hidden');
     }

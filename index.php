@@ -78,7 +78,7 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
         #botonesEdicion #btnEliminar { color: #A3263B !important; border-color: #F2C9D0; }
         #btnGuardar { background: var(--jade) !important; border-radius: .8rem !important; font-size: 1.05rem; }
         #btnGuardar:hover { background: #0A5E4D !important; }
-        .rol-contabilidad .solo-operacion { display: none !important; } /* contabilidad: solo consulta */
+        .rol-asistente .solo-admin { display: none !important; } /* asistente: sin corte ni administración */
         @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
         
         /* REGLAS DE IMPRESIÓN CORREGIDAS */
@@ -126,7 +126,7 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
             <button onclick="abrirRemisiones()" class="solo-operacion nav-item whitespace-nowrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg> Cobros del día</button>
             <button onclick="abrirModalAsistencias()" class="solo-operacion nav-item whitespace-nowrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg> Pasar asistencia</button>
             <button onclick="abrirDirectorio()" class="nav-item whitespace-nowrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> Pacientes y citas</button>
-            <button onclick="abrirHistorialCortes()" class="nav-item whitespace-nowrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg> Cortes de caja</button>
+            <button onclick="abrirHistorialCortes()" class="solo-admin nav-item whitespace-nowrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg> Cortes de caja</button>
             <button onclick="abrirCumples()" class="nav-item whitespace-nowrap"><span aria-hidden="true" style="width:20px;text-align:center">🎂</span> Cumpleaños <span id="badgeCumples" class="hidden ml-auto bg-rosa text-white text-xs font-bold rounded-full px-2 py-0.5"></span></button>
             <button onclick="abrirAusencias()" class="solo-operacion nav-item whitespace-nowrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 15l6 4M15 15l-6 4"/></svg> Ausencias</button>
             <?php if ($rol === 'admin'): ?><a href="admin.php" class="nav-item whitespace-nowrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Administración</a><?php endif; ?>
@@ -328,10 +328,10 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
 
                 <div class="flex justify-between items-end mb-6 no-print">
                     <div>
-                        <label class="block font-bold text-gray-700 text-sm mb-1 uppercase">Fecha del Corte Diario:</label>
+                        <label class="block font-bold text-gray-700 text-sm mb-1 uppercase">Fecha:</label>
                         <input type="date" id="inputFechaRemision" onchange="cargarDatosRemision()" class="border border-gray-400 rounded-md p-2 shadow-sm font-bold text-gray-700 focus:ring-emerald-500">
                     </div>
-                    <div class="flex gap-2">
+                    <div class="solo-admin flex gap-2">
                         <button id="btn-guardar-corte" onclick="guardarCorteDiario()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded shadow flex items-center gap-2 transition-colors">💾 Guardar Corte</button>
                         <button onclick="enviarRemisionWhatsApp()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded shadow flex items-center gap-2 transition-colors">📲 WhatsApp</button>
                         <button onclick="enviarRemisionCorreo()" class="bg-gray-700 hover:bg-gray-800 text-white font-bold py-2 px-4 rounded shadow flex items-center gap-2 transition-colors">✉️ Correo</button>
@@ -348,7 +348,7 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
                     </table>
                 </div>
 
-                <div class="flex justify-between items-end gap-6 mt-4">
+                <div class="solo-admin flex justify-between items-end gap-6 mt-4">
                     <div class="w-1/2">
                         <div class="flex gap-4 items-center mb-4"><label class="font-bold text-gray-700">Folios del:</label><input type="text" id="folio-inicio" readonly class="border-b border-gray-400 w-24 px-1 focus:outline-none bg-transparent font-mono text-gray-600 cursor-not-allowed"><label class="font-bold text-gray-700">al:</label><input type="text" id="folio-fin" readonly class="border-b border-gray-400 w-24 px-1 focus:outline-none bg-transparent font-mono text-gray-600 cursor-not-allowed"></div>
                         <div class="mt-8 pt-4 w-64 text-center border-t border-black"><span class="text-sm font-bold text-gray-700">Firma del Médico / Recepción</span></div>
@@ -413,7 +413,7 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
                 <h3 class="font-bold text-gray-700 border-b pb-2 mb-4 text-sm uppercase tracking-wider">Historial de Tratamiento</h3>
                 <div class="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm"><table class="w-full text-sm text-left text-gray-700"><thead class="text-xs text-gray-500 uppercase bg-gray-100 border-b border-gray-200"><tr><th class="px-4 py-3">Fecha y Hora</th><th class="px-4 py-3">Tratamiento</th><th class="px-4 py-3">Sucursal</th><th class="px-4 py-3 text-center">Asistencia</th></tr></thead><tbody id="perfil-historial-body" class="divide-y divide-gray-100"></tbody></table></div>
                 <?php if ($esClinico): ?>
-                <h3 class="font-bold text-gray-700 border-b pb-2 mb-4 mt-6 text-sm uppercase tracking-wider">🩺 Notas del médico <span class="normal-case font-normal text-gray-400">(solo médicos/terapeutas)</span></h3>
+                <h3 class="font-bold text-gray-700 border-b pb-2 mb-4 mt-6 text-sm uppercase tracking-wider">🩺 Notas del médico <span class="normal-case font-normal text-gray-400">(admin y asistentes)</span></h3>
                 <form id="formNota" onsubmit="guardarNota(event)" class="bg-white border border-gray-200 rounded-lg p-4 mb-4 grid grid-cols-1 md:grid-cols-4 gap-3">
                     <select name="rodilla" class="border rounded p-2 text-sm"><option value="">Rodilla…</option><option>Derecha</option><option>Izquierda</option><option>Ambas</option></select>
                     <input name="diagnostico" maxlength="255" placeholder="Diagnóstico" class="md:col-span-2 border rounded p-2 text-sm">

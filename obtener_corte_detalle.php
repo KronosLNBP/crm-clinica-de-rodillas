@@ -4,7 +4,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/auth.php';
 
-$u = requiere_staff_api();
+$u = requiere_staff_api(ROLES_ADMIN);
 $id = (int)($_GET['id_corte'] ?? 0);
 if ($id <= 0) error_usuario('Falta el corte.');
 

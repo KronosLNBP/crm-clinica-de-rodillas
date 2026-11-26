@@ -41,6 +41,17 @@ function usuario_actual(): ?array
         unset($_SESSION['staff'], $_SESSION['staff_ultimo']);
         return null;
     }
+    global $pdo;
+    $st = $pdo->prepare('SELECT nombre, rol, id_sucursal FROM usuarios WHERE id_usuario = ? AND activo = 1');
+    $st->execute([$u['id']]);
+    $fila = $st->fetch();
+    if (!$fila) {                          // lo desactivaron o lo borraron: fuera
+        unset($_SESSION['staff'], $_SESSION['staff_ultimo']);
+        return null;
+    }
+    $u = ['id' => $u['id'], 'nombre' => $fila['nombre'], 'rol' => rol_normalizado((string)$fila['rol']),
+          'id_sucursal' => $fila['id_sucursal'] !== null ? (int)$fila['id_sucursal'] : null];
+    $_SESSION['staff'] = $u;
     $_SESSION['staff_ultimo'] = time();
     return $u;
 }
@@ -69,7 +80,7 @@ function usuario_por_token(): ?array
     return [
         'id'          => (int)$r['id_usuario'],
         'nombre'      => $r['nombre'],
-        'rol'         => $r['rol'],
+        'rol'         => rol_normalizado((string)$r['rol']),
         'id_sucursal' => $r['id_sucursal'] !== null ? (int)$r['id_sucursal'] : null,
         'id_token'    => (int)$r['id_token'],
     ];

@@ -6,7 +6,7 @@ require_once __DIR__ . '/auth.php';
 $u = requiere_staff_api(['admin']);
 solo_post();
 
-const ROLES_VALIDOS = ['admin', 'recepcion', 'medico', 'terapeuta', 'contabilidad'];
+const ROLES_VALIDOS = ['admin', 'asistente'];
 
 $id      = (int)($_POST['id_usuario'] ?? 0);
 $nombre  = txt($_POST, 'nombre', 120);
