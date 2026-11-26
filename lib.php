@@ -209,7 +209,7 @@ function folio_expediente(int $idPaciente): string
 /** Historial, asistencias e inversión de un paciente (lo usan el CRM y el portal). */
 function perfil_paciente(PDO $pdo, int $idPaciente): ?array
 {
-    $st = $pdo->prepare('SELECT id_paciente, nombre, telefono FROM pacientes WHERE id_paciente = ?');
+    $st = $pdo->prepare('SELECT id_paciente, nombre, telefono, fecha_nacimiento, procedencia FROM pacientes WHERE id_paciente = ?');
     $st->execute([$idPaciente]);
     $pac = $st->fetch();
     if (!$pac) {
@@ -246,6 +246,8 @@ function perfil_paciente(PDO $pdo, int $idPaciente): ?array
         'id_paciente' => (int)$pac['id_paciente'],
         'paciente'    => $pac['nombre'],
         'telefono'    => $pac['telefono'],
+        'fecha_nacimiento' => $pac['fecha_nacimiento'],
+        'procedencia' => $pac['procedencia'],
         'folio'       => folio_expediente((int)$pac['id_paciente']),
         'total_citas' => count($historial),
         'asistencias' => $asis,

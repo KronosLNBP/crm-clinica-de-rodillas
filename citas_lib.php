@@ -38,7 +38,21 @@ function datos_cita_desde_post(PDO $pdo, array $u, int $idCitaActual = 0): array
     $srv = servicio_por_nombre($pdo, $tipo);
     if (!$srv) error_usuario('Tipo de tratamiento no válido.');
 
+    // Fecha de nacimiento y procedencia (son datos del paciente, no de la cita)
+    $fNac = txt($_POST, 'fecha_nacimiento', 10);
+    $procedencia = preg_replace('/\s+/', ' ', txt($_POST, 'procedencia', 120));
+    if ($fNac !== '') {
+        if (!fecha_valida($fNac) || $fNac > date('Y-m-d') || $fNac < '1900-01-01') {
+            error_usuario('La fecha de nacimiento no es válida.');
+        }
+        $edad = (int)(new DateTime($fNac))->diff(new DateTime('today'))->y;   // la edad sale de la fecha
+    }
+
     $idPaciente = obtener_o_crear_paciente($pdo, $paciente, $telefono, (int)$suc['id_sucursal']);
+    if ($fNac !== '' || $procedencia !== '') {
+        $pdo->prepare('UPDATE pacientes SET fecha_nacimiento = COALESCE(?, fecha_nacimiento), procedencia = COALESCE(?, procedencia) WHERE id_paciente = ?')
+            ->execute([$fNac !== '' ? $fNac : null, $procedencia !== '' ? $procedencia : null, $idPaciente]);
+    }
 
     // Si ya asistió antes, es paciente: no depende de que recepción lo marque
     $st = $pdo->prepare("SELECT 1 FROM citas WHERE id_paciente = ? AND asistencia = 'Asistió' AND id_cita <> ? LIMIT 1");

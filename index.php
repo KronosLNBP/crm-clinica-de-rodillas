@@ -127,6 +127,7 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
             <button onclick="abrirModalAsistencias()" class="solo-operacion nav-item whitespace-nowrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg> Pasar asistencia</button>
             <button onclick="abrirDirectorio()" class="nav-item whitespace-nowrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> Pacientes y citas</button>
             <button onclick="abrirHistorialCortes()" class="nav-item whitespace-nowrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg> Cortes de caja</button>
+            <button onclick="abrirCumples()" class="nav-item whitespace-nowrap"><span aria-hidden="true" style="width:20px;text-align:center">🎂</span> Cumpleaños <span id="badgeCumples" class="hidden ml-auto bg-rosa text-white text-xs font-bold rounded-full px-2 py-0.5"></span></button>
             <button onclick="abrirAusencias()" class="solo-operacion nav-item whitespace-nowrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 15l6 4M15 15l-6 4"/></svg> Ausencias</button>
             <?php if ($rol === 'admin'): ?><a href="admin.php" class="nav-item whitespace-nowrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Administración</a><?php endif; ?>
         </nav>
@@ -425,6 +426,18 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
         </div>
     </div>
 
+    <!-- MODAL CUMPLEAÑOS -->
+    <div id="modalCumples" class="fixed inset-0 bg-black bg-opacity-60 hidden flex justify-center items-center z-[70] p-4 no-print">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div class="flex justify-between items-center p-4 border-b"><h2 class="text-xl font-black">🎂 Cumpleaños</h2><button onclick="document.getElementById('modalCumples').classList.add('hidden')" class="text-gray-500 hover:text-red-500 text-3xl font-bold leading-none">&times;</button></div>
+            <div class="p-6 overflow-y-auto bg-gray-50">
+                <p class="text-sm text-gray-600 mb-4">El aviso aparece un día antes para que la felicitación salga a tiempo. Al tocar “Felicitar por WhatsApp” se abre el mensaje listo y el paciente queda marcado como felicitado este año.</p>
+                <h3 class="font-bold mb-2">Mañana</h3><div id="lista-cumples-manana" class="space-y-2 mb-6"></div>
+                <h3 class="font-bold mb-2">Hoy</h3><div id="lista-cumples-hoy" class="space-y-2"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL AUSENCIAS / BLOQUEOS DE AGENDA -->
     <div id="modalAusencias" class="fixed inset-0 bg-black bg-opacity-60 hidden flex justify-center items-center z-[70] p-4 no-print">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
@@ -496,6 +509,8 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
                 <div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700">Fecha</label><input type="date" name="fecha" id="inputFecha" required class="mt-1 block w-full border border-gray-300 rounded-md p-2"></div><div><label class="block text-sm font-medium text-gray-700">Hora</label><input type="time" name="hora" id="inputHora" step="1800" required class="mt-1 block w-full border border-gray-300 rounded-md p-2"></div></div>
                 <div class="bg-gray-50 border border-gray-200 p-3 rounded-md"><label class="block text-sm font-bold text-gray-700 mb-2">Control de Asistencia</label><div class="flex items-center gap-6"><label class="inline-flex items-center cursor-pointer hover:bg-green-50 p-1 rounded transition"><input type="checkbox" id="checkSiAsistio" class="w-6 h-6 text-green-600 border-gray-400 rounded focus:ring-green-500 cursor-pointer shadow-sm"><span class="ml-2 text-sm font-bold text-green-700">✅ Sí Asistió</span></label><label class="inline-flex items-center cursor-pointer hover:bg-red-50 p-1 rounded transition"><input type="checkbox" id="checkNoAsistio" class="w-6 h-6 text-red-600 border-gray-400 rounded focus:ring-red-500 cursor-pointer shadow-sm"><span class="ml-2 text-sm font-bold text-red-700">❌ No Asistió</span></label></div></div>
                 <div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700">Estado Base</label><select name="estado" id="inputEstado" class="mt-1 block w-full border border-gray-300 rounded-md p-2 bg-white"><option value="Agendado">Agendado</option><option value="Confirmada">Confirmada</option><option value="Express">Cita en el Momento ⚡</option></select></div><div><label class="block text-sm font-medium text-gray-700">Edad</label><input type="number" name="edad" id="inputEdad" class="mt-1 block w-full border border-gray-300 rounded-md p-2"></div></div>
+                <div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700" for="inputFechaNac">Fecha de nacimiento</label><input type="date" name="fecha_nacimiento" id="inputFechaNac" max="<?= date('Y-m-d') ?>" oninput="calcularEdad()" class="mt-1 block w-full border border-gray-300 rounded-md p-2"></div><div><label class="block text-sm font-medium text-gray-700" for="inputProcedencia">Lugar de procedencia</label><input type="text" name="procedencia" id="inputProcedencia" list="listaProcedencias" maxlength="120" placeholder="Ej. CDMX, Hidalgo…" class="mt-1 block w-full border border-gray-300 rounded-md p-2"></div></div>
+                <datalist id="listaProcedencias"><option>Ciudad de México</option><option>Estado de México</option><option>Hidalgo</option><option>Puebla</option><option>Tlaxcala</option><option>Morelos</option><option>Querétaro</option><option>Veracruz</option><option>Guerrero</option><option>Otro estado</option><option>Extranjero</option></datalist>
                 <div><label class="block text-sm font-medium text-gray-700">Paciente</label><input type="text" name="paciente" id="inputPaciente" required class="mt-1 block w-full border border-gray-300 rounded-md p-2"></div>
                 <div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700">Teléfono</label><input type="tel" name="telefono" id="inputTelefono" required class="mt-1 block w-full border border-gray-300 rounded-md p-2"></div><div><label class="block text-sm font-medium text-gray-700">¿Ya es paciente?</label><select name="ya_es_paciente" id="inputYaPaciente" class="mt-1 block w-full border border-gray-300 rounded-md p-2"><option value="No">No</option><option value="Si">Sí</option></select></div></div>
                 <div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700">Tipo (Tratamiento)</label><select name="tipo" id="inputTipo" class="mt-1 block w-full border border-gray-300 rounded-md p-2"><option value="Sports medicine">Sports medicine</option><option value="Clínica de rodillas">Clínica de rodillas</option><option value="Cámara Hiperbárica">Cámara Hiperbárica</option></select></div><div><label class="block text-sm font-medium text-gray-700">Sucursal</label><select name="sucursal" id="inputSucursal" class="mt-1 block w-full border border-gray-300 rounded-md p-2"><?= $opcionesSucursal ?></select></div></div>
@@ -696,7 +711,7 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
             document.getElementById('perfil-nombre').innerText = "Cargando..."; document.getElementById('modalPerfil').classList.remove('hidden'); if (PUEDE_NOTAS) cargarNotas();
             fetch(`obtener_perfil_paciente.php?id_cita=${encodeURIComponent(idCita)}`).then(res => res.json()).then(data => {
                 if(data.status === 'success') {
-                    const info = data.data; document.getElementById('perfil-nombre').innerText = info.paciente; document.getElementById('perfil-telefono').innerText = "📞 " + (info.telefono || telefono || 'Sin registrar'); document.getElementById('perfil-folio').innerText = info.folio; document.getElementById('perfil-total-citas').innerText = info.total_citas; document.getElementById('perfil-asistencias').innerText = info.asistencias; document.getElementById('perfil-faltas').innerText = info.faltas;
+                    const info = data.data; document.getElementById('perfil-nombre').innerText = info.paciente; document.getElementById('perfil-telefono').innerText = "📞 " + (info.telefono || telefono || 'Sin registrar') + (info.fecha_nacimiento ? '   🎂 ' + info.fecha_nacimiento.split('-').reverse().join('/') : '') + (info.procedencia ? '   📍 ' + info.procedencia : ''); document.getElementById('perfil-folio').innerText = info.folio; document.getElementById('perfil-total-citas').innerText = info.total_citas; document.getElementById('perfil-asistencias').innerText = info.asistencias; document.getElementById('perfil-faltas').innerText = info.faltas;
                     const usdFormatter = fmtMXN; document.getElementById('perfil-inversion').innerText = usdFormatter.format(info.inversion);
                     let htmlTabla = '';
                     if(info.historial.length === 0) { htmlTabla = '<tr><td colspan="4" class="text-center py-4 text-gray-500">No hay historial clínico previo.</td></tr>'; } 
@@ -1023,7 +1038,7 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
         function abrirModalEditar(cita) {
             document.getElementById('modalCita').classList.remove('hidden'); document.getElementById('tituloModal').innerText = "Editar Cita"; document.getElementById('checkSiAsistio').checked = false; document.getElementById('checkNoAsistio').checked = false;
             if (cita.asistencia === 'Asistió') document.getElementById('checkSiAsistio').checked = true; else if (cita.asistencia === 'No Asistió') document.getElementById('checkNoAsistio').checked = true;
-            document.getElementById('inputIdCita').value = cita.id_cita; document.getElementById('inputFecha').value = cita.fecha; document.getElementById('inputHora').value = cita.hora.substring(0, 5); document.getElementById('inputEstado').value = cita.estado; document.getElementById('inputPaciente').value = cita.paciente; document.getElementById('inputTelefono').value = cita.telefono; document.getElementById('inputEdad').value = cita.edad ?? ''; document.getElementById('inputYaPaciente').value = cita.ya_es_paciente; document.getElementById('inputTipo').value = cita.tipo_tratamiento; document.getElementById('inputAsistente').value = cita.asistente || ''; document.getElementById('inputSucursal').value = cita.sucursal;
+            document.getElementById('inputIdCita').value = cita.id_cita; document.getElementById('inputFecha').value = cita.fecha; document.getElementById('inputHora').value = cita.hora.substring(0, 5); document.getElementById('inputEstado').value = cita.estado; document.getElementById('inputPaciente').value = cita.paciente; document.getElementById('inputTelefono').value = cita.telefono; document.getElementById('inputEdad').value = cita.edad ?? ''; document.getElementById('inputFechaNac').value = cita.fecha_nacimiento || ''; document.getElementById('inputProcedencia').value = cita.procedencia || ''; document.getElementById('inputYaPaciente').value = cita.ya_es_paciente; document.getElementById('inputTipo').value = cita.tipo_tratamiento; document.getElementById('inputAsistente').value = cita.asistente || ''; document.getElementById('inputSucursal').value = cita.sucursal;
             document.getElementById('botonesEdicion').classList.remove('hidden'); document.getElementById('btnPerfil').classList.remove('hidden'); document.getElementById('btnCarnet').classList.remove('hidden'); document.getElementById('btnSubsecuente').classList.remove('hidden');
             const btnEliminar = document.getElementById('btnEliminar'); btnEliminar.classList.remove('hidden');
             if (cita.asistencia === 'Asistió') { btnEliminar.disabled = true; btnEliminar.classList.add('opacity-50', 'cursor-not-allowed'); } else { btnEliminar.disabled = false; btnEliminar.classList.remove('opacity-50', 'cursor-not-allowed'); }
@@ -1063,6 +1078,7 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
             sucursalActual = sucursal;
             if(botonMenuId !== '') { document.querySelectorAll('.menu-item').forEach(li => li.classList.remove('menu-activo')); document.getElementById(botonMenuId).classList.add('menu-activo'); }
             document.getElementById('titulo-calendario').innerText = sucursal === '' ? 'Agenda de todas las sucursales' : `Agenda de ${sucursal}`;
+            cargarCumples();
             const r = rangoVisible();
             const qs = new URLSearchParams({ sucursal, tipo: tipoTratamientoActual, ya_es_paciente: yaPacienteActual, desde: r.desde, hasta: r.hasta });
             Promise.all([
@@ -1161,6 +1177,10 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
                 <p class="text-[#4B5A62]">${hd ? `Abierto de <strong class="tabular">${aHora(hd.ini)}</strong> a <strong class="tabular">${aHora(hd.fin)}</strong>` : '<strong>Cerrado</strong> este día'}</p>
                 <p class="text-[#4B5A62] tabular"><strong class="text-tinta">${citas.length}</strong> citas, <span class="text-[#2F7D4F] font-semibold">${asis} asistieron</span>, <span class="text-rosa font-semibold">${faltas} faltaron</span></p></div>`;
             html += bl.map(b => `<div class="mx-5 mt-4 rounded-xl bg-[#FBE9EC] text-[#A3263B] px-4 py-3 font-semibold">🚫 ${esc(textoBloqueo(b))}</div>`).join('');
+            if (f === formatearFechaISO(new Date())) {
+                const pend = [...cumplesData.manana.map(x => ({ ...x, c: 'mañana' })), ...cumplesData.hoy.map(x => ({ ...x, c: 'hoy' }))].filter(x => !x.felicitado);
+                if (pend.length) html += `<button onclick="abrirCumples()" class="mx-5 mt-4 w-[calc(100%-2.5rem)] text-left rounded-xl bg-[#FDF3E3] text-[#8A5A12] px-4 py-3 font-semibold">🎂 ${pend.length === 1 ? esc(pend[0].nombre) + ' cumple años ' + pend[0].c : pend.length + ' pacientes cumplen años hoy o mañana'}. Toca para felicitar.</button>`;
+            }
             if (!citas.length) {
                 html += `<div class="px-5 py-16 text-center"><p class="text-xl font-bold">No hay citas este día</p><p class="text-[#6B7B83] mt-1">Agenda una con el botón “Nueva cita”.</p></div>`;
             } else {
@@ -1202,6 +1222,45 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
             }
             abrirRemisiones();
             document.getElementById('inputFechaRemision').value = c.fecha; cargarDatosRemision();
+        }
+
+        // ===== Edad automática desde la fecha de nacimiento =====
+        function calcularEdad() {
+            const v = document.getElementById('inputFechaNac').value; if (!v) return;
+            const n = new Date(v + 'T12:00'), h = new Date();
+            let e = h.getFullYear() - n.getFullYear(); const m = h.getMonth() - n.getMonth();
+            if (m < 0 || (m === 0 && h.getDate() < n.getDate())) e--;
+            if (e >= 0 && e < 120) document.getElementById('inputEdad').value = e;
+        }
+
+        // ===== Cumpleaños (aviso un día antes) =====
+        let cumplesData = { hoy: [], manana: [] };
+        function cargarCumples() {
+            fetch(`obtener_cumpleanos.php?${new URLSearchParams({ sucursal: sucursalActual })}`).then(r => r.json()).then(d => {
+                if (d.status !== 'success') return;
+                cumplesData = d;
+                const pendientes = [...d.hoy, ...d.manana].filter(x => !x.felicitado).length;
+                const b = document.getElementById('badgeCumples'); b.textContent = pendientes; b.classList.toggle('hidden', pendientes === 0);
+                if (vistaActual === 'dia') generarVistaDia();
+                if (!document.getElementById('modalCumples').classList.contains('hidden')) pintarCumples();
+            }).catch(() => {});
+        }
+        function filaCumple(x, cuando) {
+            const msj = `¡Feliz cumpleaños, ${x.nombre.split(' ')[0]}! 🎂 De parte de todo el equipo de Clínica de Rodillas te deseamos un excelente día. ¡Gracias por confiar en nosotros!`;
+            const tel = String(x.telefono || '').replace(/\D/g, ''); const wa = `https://wa.me/${tel.length === 10 ? '52' + tel : tel}?text=${encodeURIComponent(msj)}`;
+            return `<div class="flex flex-wrap items-center justify-between gap-3 bg-white border rounded-lg p-3"><div><p class="font-bold">${esc(x.nombre)} <span class="font-normal text-gray-500">cumple ${parseInt(x.cumple)} ${cuando}</span></p><p class="text-xs text-gray-500">📞 ${esc(x.telefono)}${x.sucursal ? ' · ' + esc(x.sucursal) : ''}${x.procedencia ? ' · 📍 ' + esc(x.procedencia) : ''}</p></div>`
+                + (x.felicitado ? '<span class="text-sm font-bold text-[#2F7D4F]">✓ Felicitado</span>'
+                    : `<a href="${esc(wa)}" target="_blank" rel="noopener" onclick="marcarFelicitado(${parseInt(x.id_paciente)}, ${parseInt(x.anio)})" class="solo-operacion px-3 py-2 rounded-lg bg-[#25D366] text-white font-bold text-sm">Felicitar por WhatsApp</a>`) + '</div>';
+        }
+        function pintarCumples() {
+            const vacio = '<p class="text-sm text-gray-500 italic">Nadie.</p>';
+            document.getElementById('lista-cumples-manana').innerHTML = cumplesData.manana.map(x => filaCumple(x, 'mañana')).join('') || vacio;
+            document.getElementById('lista-cumples-hoy').innerHTML = cumplesData.hoy.map(x => filaCumple(x, 'hoy')).join('') || vacio;
+        }
+        function abrirCumples() { pintarCumples(); document.getElementById('modalCumples').classList.remove('hidden'); cargarCumples(); }
+        function marcarFelicitado(id, anio) {
+            const fd = new FormData(); fd.append('id_paciente', id); fd.append('anio', anio);
+            fetch('marcar_felicitado.php', { method: 'POST', body: fd }).then(() => setTimeout(cargarCumples, 400));
         }
 
         // ===== Ausencias =====
