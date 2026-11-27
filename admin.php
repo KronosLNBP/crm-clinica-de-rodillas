@@ -1,5 +1,5 @@
 <?php
-// Administración: usuarios del personal y horarios de cada sucursal. Solo administradores.
+// Administración: reporte de remisiones, usuarios del personal y horarios de cada sucursal. Solo administradores.
 declare(strict_types=1);
 require_once __DIR__ . '/auth.php';
 $usuario = requiere_staff_pagina();
@@ -42,8 +42,46 @@ $e = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES);
 
 <div class="max-w-6xl mx-auto mt-6 px-4 pb-12 space-y-8">
 
+    <div class="flex flex-wrap gap-2 text-sm font-semibold">
+        <a href="#remisiones" class="bg-white rounded-full shadow px-4 py-1.5 text-[#0E7C66]">🧾 Remisiones</a>
+        <a href="#usuarios" class="bg-white rounded-full shadow px-4 py-1.5 text-[#0E7C66]">👥 Usuarios</a>
+        <a href="#horarios" class="bg-white rounded-full shadow px-4 py-1.5 text-[#0E7C66]">🕘 Horarios</a>
+    </div>
+
+    <!-- REMISIONES -->
+    <section id="remisiones" class="bg-white rounded-xl shadow p-6 scroll-mt-4">
+        <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+            <div><h2 class="text-lg font-black text-gray-800">🧾 Remisiones generadas</h2><p class="text-sm text-gray-500">Todas las sucursales. Los totales cuentan solo remisiones vigentes.</p></div>
+            <button onclick="descargarRemCsv()" class="bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50 font-bold px-4 py-2 rounded text-sm">⬇️ Descargar Excel (CSV)</button>
+        </div>
+        <form id="filtrosRem" onsubmit="event.preventDefault(); cargarRem(1)" onchange="cargarRem(1)" class="grid grid-cols-2 md:grid-cols-6 gap-3 items-end text-sm mb-3">
+            <label class="block">Sucursal<select name="sucursal" class="w-full border rounded p-2 mt-1 bg-white"><option value="">Todas</option><?php foreach ($sucursales as $s): ?><option><?= $e($s['nombre_sucursal']) ?></option><?php endforeach; ?></select></label>
+            <label class="block">Desde<input type="date" name="desde" class="w-full border rounded p-2 mt-1"></label>
+            <label class="block">Hasta<input type="date" name="hasta" class="w-full border rounded p-2 mt-1"></label>
+            <label class="block">Método de pago<select name="metodo" class="w-full border rounded p-2 mt-1 bg-white"><option value="">Todos</option><option value="efectivo">Efectivo</option><option value="credito">Tarjeta de crédito</option><option value="debito">Tarjeta de débito</option><option value="transferencia">Transferencia</option></select></label>
+            <label class="block">Estado<select name="estado" class="w-full border rounded p-2 mt-1 bg-white"><option value="">Todas</option><option value="Vigente">Vigentes</option><option value="Cancelada">Canceladas</option></select></label>
+            <label class="block col-span-2 md:col-span-1">Buscar<input type="search" name="q" placeholder="Cliente, folio o concepto" oninput="clearTimeout(window._tRem); window._tRem = setTimeout(() => cargarRem(1), 400)" class="w-full border rounded p-2 mt-1"></label>
+        </form>
+        <div class="flex flex-wrap gap-2 mb-4 text-xs font-semibold">
+            <button type="button" onclick="rangoRem('hoy')" class="bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-1">Hoy</button>
+            <button type="button" onclick="rangoRem('semana')" class="bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-1">Esta semana</button>
+            <button type="button" onclick="rangoRem('mes')" class="bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-1">Este mes</button>
+            <button type="button" onclick="rangoRem('mesPasado')" class="bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-1">Mes pasado</button>
+            <button type="button" onclick="rangoRem('anio')" class="bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-1">Este año</button>
+        </div>
+        <div id="resumenRem" class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3"></div>
+        <div id="sucRem" class="flex flex-wrap gap-2 mb-4 text-xs"></div>
+        <div class="overflow-x-auto border rounded-lg">
+            <table class="w-full text-sm text-left min-w-[860px]">
+                <thead class="bg-gray-50 text-xs text-gray-500 uppercase"><tr><th class="p-2">Folio</th><th class="p-2">Fecha</th><th class="p-2">Sucursal</th><th class="p-2">Cliente y conceptos</th><th class="p-2">Método</th><th class="p-2 text-right">Total</th><th class="p-2">Registró</th><th class="p-2"></th></tr></thead>
+                <tbody id="tablaRem"><tr><td colspan="8" class="p-6 text-center text-gray-400">Cargando…</td></tr></tbody>
+            </table>
+        </div>
+        <div id="pagRem" class="flex justify-between items-center mt-3 text-sm"></div>
+    </section>
+
     <!-- USUARIOS -->
-    <section class="bg-white rounded-xl shadow p-6">
+    <section id="usuarios" class="bg-white rounded-xl shadow p-6 scroll-mt-4">
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-lg font-black text-gray-800">👥 Usuarios del personal</h2>
             <button onclick="editarUsuario(null)" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded shadow text-sm">+ Nuevo usuario</button>
@@ -70,7 +108,7 @@ $e = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES);
     </section>
 
     <!-- HORARIOS -->
-    <section class="bg-white rounded-xl shadow p-6">
+    <section id="horarios" class="bg-white rounded-xl shadow p-6 scroll-mt-4">
         <h2 class="text-lg font-black text-gray-800 mb-1">🕘 Horario de cada sucursal</h2>
         <p class="text-xs text-gray-500 mb-4">La agenda solo muestra estas horas y avisa si alguien intenta agendar fuera de horario. Desmarca un día si la sucursal no abre.</p>
         <div class="grid md:grid-cols-2 gap-6">
@@ -149,6 +187,63 @@ $e = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES);
         const fd = new FormData(); fd.append('id_sucursal', form.dataset.id); fd.append('intervalo_min', form.intervalo.value); fd.append('dias', JSON.stringify(dias));
         post('guardar_horarios.php', fd).then(d => alert(d.message)).catch(() => alert('Error de red.'));
     }
+
+    // ===== Reporte de remisiones =====
+    const escH = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const mxn = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
+    const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    let remData = [];
+    function rangoRem(tipo) {
+        const h = new Date(), f = document.getElementById('filtrosRem');
+        let ini = new Date(h), fin = new Date(h);
+        if (tipo === 'semana') { ini.setDate(h.getDate() - ((h.getDay() + 6) % 7)); }
+        if (tipo === 'mes') { ini = new Date(h.getFullYear(), h.getMonth(), 1); }
+        if (tipo === 'mesPasado') { ini = new Date(h.getFullYear(), h.getMonth() - 1, 1); fin = new Date(h.getFullYear(), h.getMonth(), 0); }
+        if (tipo === 'anio') { ini = new Date(h.getFullYear(), 0, 1); }
+        f.desde.value = iso(ini); f.hasta.value = iso(fin); cargarRem(1);
+    }
+    function paramsRem(extra = {}) { return new URLSearchParams({ ...Object.fromEntries(new FormData(document.getElementById('filtrosRem'))), ...extra }); }
+    function metodoRem(r) {
+        if (r.metodo_pago) return r.metodo_pago;
+        return [['Efectivo', r.efectivo], ['T. crédito', r.credito], ['T. débito', r.debito], ['Transferencia', r.transferencia]].filter(m => parseFloat(m[1]) > 0).map(m => m[0]).join(' + ') || '—';
+    }
+    function cargarRem(pagina) {
+        const tb = document.getElementById('tablaRem');
+        tb.innerHTML = '<tr><td colspan="8" class="p-6 text-center text-gray-400">Cargando…</td></tr>';
+        fetch('obtener_remisiones_admin.php?' + paramsRem({ pagina }), { credentials: 'same-origin' }).then(r => r.json()).then(d => {
+            if (d.status !== 'success') { tb.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-red-600">${escH(d.message)}</td></tr>`; return; }
+            remData = d.data; const s = d.resumen;
+            const tarjeta = (t, v, sub = '') => `<div class="rounded-lg border p-3"><p class="text-xs text-gray-500">${t}</p><p class="text-lg font-black">${v}</p>${sub ? `<p class="text-xs text-gray-400">${sub}</p>` : ''}</div>`;
+            document.getElementById('resumenRem').innerHTML =
+                tarjeta('Remisiones', s.n, s.canceladas > 0 ? `${s.canceladas} cancelada${s.canceladas == 1 ? '' : 's'}` : '')
+                + tarjeta('Total vigente', mxn.format(s.total)) + tarjeta('Efectivo', mxn.format(s.efectivo))
+                + tarjeta('Tarjetas', mxn.format(+s.credito + +s.debito), `Crédito ${mxn.format(s.credito)} · Débito ${mxn.format(s.debito)}`) + tarjeta('Transferencia', mxn.format(s.transferencia));
+            document.getElementById('sucRem').innerHTML = d.por_sucursal.map(x => `<span class="bg-emerald-50 text-emerald-800 rounded-full px-3 py-1 font-semibold">${escH(x.sucursal)}: ${mxn.format(x.total)} · ${x.n}</span>`).join('');
+            tb.innerHTML = remData.length ? remData.map((r, i) => {
+                const canc = r.estado === 'Cancelada';
+                const conceptos = r.conceptos.length ? r.conceptos.map(c => `${c.cantidad > 1 ? c.cantidad + ' × ' : ''}${escH(c.descripcion)}`).join(', ') : escH(r.servicio);
+                return `<tr class="border-t ${canc ? 'bg-red-50/50 text-gray-400' : ''}">
+                    <td class="p-2 font-mono font-bold ${canc ? '' : 'text-emerald-700'}">${escH(r.folio)}${canc ? '<span class="block text-[10px] font-sans font-bold text-red-600">CANCELADA</span>' : ''}</td>
+                    <td class="p-2 whitespace-nowrap">${escH(r.fecha)}</td><td class="p-2">${escH(r.sucursal)}</td>
+                    <td class="p-2"><p class="font-semibold ${canc ? 'line-through' : 'text-gray-800'}">${escH(r.paciente)}${r.id_cita ? '' : ' <span class="text-[10px] text-sky-700 font-normal">(sin cita)</span>'}</p><p class="text-xs text-gray-500">${conceptos}</p>${r.observaciones ? `<p class="text-xs text-gray-400 italic">${escH(r.observaciones)}</p>` : ''}</td>
+                    <td class="p-2 text-xs">${escH(metodoRem(r))}</td>
+                    <td class="p-2 text-right font-black whitespace-nowrap">${mxn.format(r.total)}</td>
+                    <td class="p-2 text-xs">${escH(r.atendio || r.usuario || '')}</td>
+                    <td class="p-2 text-right whitespace-nowrap">${r.ruta_archivo ? `<a href="ver_archivo.php?f=${encodeURIComponent(r.ruta_archivo)}" target="_blank" class="text-emerald-700 font-semibold hover:underline">PDF</a>` : ''}${canc ? '' : ` <button onclick="cancelarRem(${i})" class="ml-2 text-red-600 font-semibold hover:underline">Cancelar</button>`}</td></tr>`;
+            }).join('') : '<tr><td colspan="8" class="p-6 text-center text-gray-400">No hay remisiones con estos filtros.</td></tr>';
+            document.getElementById('pagRem').innerHTML = d.paginas > 1
+                ? `<button ${d.pagina <= 1 ? 'disabled' : ''} onclick="cargarRem(${d.pagina - 1})" class="px-3 py-1 rounded bg-gray-100 disabled:opacity-40">← Anterior</button><span class="text-gray-500">Página ${d.pagina} de ${d.paginas}</span><button ${d.pagina >= d.paginas ? 'disabled' : ''} onclick="cargarRem(${d.pagina + 1})" class="px-3 py-1 rounded bg-gray-100 disabled:opacity-40">Siguiente →</button>` : '';
+        }).catch(() => { tb.innerHTML = '<tr><td colspan="8" class="p-6 text-center text-red-600">Error de conexión.</td></tr>'; });
+    }
+    function descargarRemCsv() { location.href = 'obtener_remisiones_admin.php?' + paramsRem({ formato: 'csv' }); }
+    function cancelarRem(i) {
+        const r = remData[i]; if (!r) return;
+        const motivo = prompt(`Cancelar la remisión ${r.folio} de ${r.paciente} por ${mxn.format(r.total)}.\n\n¿Motivo de la cancelación?`);
+        if (!motivo || !motivo.trim()) return;
+        const fd = new FormData(); fd.append('id_remision', r.id_remision); fd.append('motivo', motivo.trim());
+        post('cancelar_remision.php', fd).then(d => { alert(d.message); if (d.status === 'success') cargarRem(1); }).catch(() => alert('Error de red.'));
+    }
+    rangoRem('mes');
 </script>
 </body>
 </html>
