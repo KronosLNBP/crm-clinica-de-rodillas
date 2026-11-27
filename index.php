@@ -1320,7 +1320,7 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
   <path d="M60,170 C170,212 290,198 380,160 C440,134 490,104 528,86 V112 C480,140 430,172 360,192 C270,218 160,214 60,170 Z" fill="${AZUL}"/>
 </svg>
 <div style="position:absolute;left:24px;top:36px;width:136px;height:136px;border-radius:50%;background:#fff;border:6px solid ${AZUL};overflow:hidden;box-shadow:0 2px 0 ${CIELO}">
-  <div style="position:absolute;left:0;top:12px;width:124px;height:96px;overflow:hidden"><img src="${LOGO_REMISION}" alt="" style="position:absolute;width:172px;max-width:none;height:auto;left:-33px;top:-27px"></div>
+  <div style="position:absolute;left:8px;top:6px;width:108px;height:108px;border-radius:50%;overflow:hidden"><img src="${LOGO_REMISION}" alt="" style="position:absolute;width:172px;max-width:none;height:auto;left:-32px;top:-40px"><div style="position:absolute;left:0;top:82px;width:108px;height:40px;background:#fff"></div></div>
 </div>
 <div style="position:absolute;left:176px;top:30px;width:330px;text-align:right;font-weight:800;font-size:25px;letter-spacing:.4px;color:${AZUL}">CLÍNICA DE RODILLAS</div>
 <div style="position:absolute;left:176px;top:60px;width:318px;text-align:right;font-family:'Great Vibes',cursive;font-size:31px;color:${AZUL}">Dr. Díaz Campuzano</div>
@@ -1364,13 +1364,15 @@ ${pill('MÉTODO DE PAGO:', 75, 660, 112)}${pill('NOMBRE Y FIRMA:', 334, 660, 112
         async function pdfNotaRemision(d) {
             if (document.fonts) { try { await Promise.all([document.fonts.load("800 25px Montserrat"), document.fonts.load("31px 'Great Vibes'"), document.fonts.load("600 12px Montserrat")]); } catch (_) {} }
             const cont = document.createElement('div');
-            cont.style.cssText = 'position:fixed;left:-10000px;top:0';
+            cont.style.cssText = 'position:absolute;left:0;top:0;width:528px;z-index:-1;pointer-events:none';
+            const scroll = [window.scrollX, window.scrollY];
+            window.scrollTo(0, 0);
             cont.innerHTML = htmlNotaRemision(d);
             document.body.appendChild(cont);
             await new Promise(r => { const img = cont.querySelector('img'); if (!img || img.complete) r(); else { img.onload = img.onerror = r; } });
             try {
-                return await html2pdf().set({ margin: 0, filename: `Remision_${d.folio}.pdf`, image: { type: 'jpeg', quality: 0.96 }, html2canvas: { scale: 3, useCORS: true, backgroundColor: '#ffffff' }, jsPDF: { unit: 'in', format: [5.5, 8.5], orientation: 'portrait' } }).from(cont.firstElementChild).output('datauristring');
-            } finally { cont.remove(); }
+                return await html2pdf().set({ margin: 0, filename: `Remision_${d.folio}.pdf`, image: { type: 'jpeg', quality: 0.96 }, html2canvas: { scale: 3, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0, windowWidth: 1024 }, jsPDF: { unit: 'in', format: [5.5, 8.5], orientation: 'portrait' } }).from(cont.firstElementChild).output('datauristring');
+            } finally { cont.remove(); window.scrollTo(scroll[0], scroll[1]); }
         }
 
         // ===== Sección Remisiones =====
