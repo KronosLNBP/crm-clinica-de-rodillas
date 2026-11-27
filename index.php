@@ -327,7 +327,7 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
                 </div>
             </div>
             <div id="panelNotaNueva" class="grid lg:grid-cols-[1fr_auto] gap-6 p-5">
-                <form id="formNota" onsubmit="guardarNota(event)" oninput="previaNota()" class="space-y-4 min-w-0">
+                <form id="formRemisionNota" onsubmit="guardarRemisionNota(event)" oninput="previaNota()" class="space-y-4 min-w-0">
                     <div class="grid sm:grid-cols-[1fr_150px] gap-3">
                         <div><label class="block text-sm font-semibold mb-1" for="notaCitaSel">Paciente con cita</label><select id="notaCitaSel" onchange="elegirCitaNota()" class="w-full border border-gray-300 rounded-lg p-2 bg-white"><option value="">Cargando citas…</option></select></div>
                         <div><label class="block text-sm font-semibold mb-1" for="notaFecha">Fecha</label><input id="notaFecha" type="date" required onchange="cargarCitasNota()" class="w-full border border-gray-300 rounded-lg p-2"></div>
@@ -1431,7 +1431,7 @@ ${pill('MÉTODO DE PAGO:', 75, 660, 112)}${pill('NOMBRE Y FIRMA:', 334, 660, 112
             if (!nueva) { const f = document.getElementById('histNotaFecha'); if (!f.value) f.value = formatearFechaISO(new Date()); cargarHistNotas(); }
         }
         function nuevaNota() {
-            document.getElementById('formNota').reset();
+            document.getElementById('formRemisionNota').reset();
             document.getElementById('notaFecha').value = formatearFechaISO(new Date());
             document.getElementById('notaAtendio').value = USUARIO_NOMBRE;
             document.getElementById('notaConceptos').innerHTML = '';
@@ -1475,7 +1475,7 @@ ${pill('MÉTODO DE PAGO:', 75, 660, 112)}${pill('NOMBRE Y FIRMA:', 334, 660, 112
             document.getElementById('notaTotal').textContent = fmtMXN.format(d.total);
             document.getElementById('notaPrevia').innerHTML = htmlNotaRemision(d);
         }
-        async function guardarNota(ev) {
+        async function guardarRemisionNota(ev) {
             ev.preventDefault();
             const d = datosNota('');
             if (d.conceptos.length === 0) { avisar('Agrega al menos un concepto.'); return; }
