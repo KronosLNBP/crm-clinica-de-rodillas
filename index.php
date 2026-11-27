@@ -340,7 +340,7 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
                             <div class="hidden sm:grid grid-cols-[64px_1fr_110px_100px_32px] gap-2 bg-[#F3F6F5] px-3 py-2 text-xs font-semibold text-[#4B5A62]"><span>Cant.</span><span>Descripción</span><span>Precio unit.</span><span class="text-right">Importe</span><span></span></div>
                             <div id="notaConceptos" class="divide-y"></div>
                         </div>
-                        <datalist id="notaServicios"><option>Consulta de valoración</option><option>Sesión de terapia de rodilla</option><option>Sesión de Cámara Hiperbárica</option><option>Paquete de sesiones</option><option>Infiltración</option><option>Rodillera</option></datalist>
+                        
                         <div class="flex items-center justify-between mt-2"><button type="button" onclick="agregarConceptoNota()" class="text-sm font-semibold text-[#0E7C66] hover:underline">+ Agregar concepto</button><p class="text-lg font-extrabold">Total: <span id="notaTotal">$0.00</span></p></div>
                     </div>
                     <div><label class="block text-sm font-semibold mb-1" for="notaObs">Observaciones</label><textarea id="notaObs" rows="2" maxlength="250" class="w-full border border-gray-300 rounded-lg p-2"></textarea></div>
@@ -1376,6 +1376,25 @@ ${pill('MÉTODO DE PAGO:', 75, 660, 112)}${pill('NOMBRE Y FIRMA:', 334, 660, 112
         // ===== Sección Remisiones =====
         const USUARIO_NOMBRE = <?= json_encode($usuario['nombre'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
         let notaCitas = [], notaIdCita = 0;
+        // Costos de servicios (pesos mexicanos). "Otro" permite escribir concepto y precio.
+        const CATALOGO_NOTA = [
+            ['Consulta de primera vez', 500],
+            ['Consulta subsecuente', 300],
+            ['Revisión de estudios', 200],
+            ['Consulta con el Dr. Díaz', 1000],
+            ['Plasma rico en plaquetas (PRP) por rodilla o zona', 950],
+            ['PRP con Inapan (sin factura)', 850],
+            ['Radiofrecuencia', 450],
+            ['Rehabilitación', 450],
+        ];
+        function elegirCatalogoNota(sel) {
+            const fila = sel.closest('.concepto-nota'), desc = fila.querySelector('.c-desc'), precio = fila.querySelector('.c-precio');
+            const otro = sel.value === 'otro', item = CATALOGO_NOTA[parseInt(sel.value)];
+            desc.classList.toggle('hidden', !otro); desc.required = otro;
+            if (otro) { desc.value = ''; precio.value = ''; desc.focus(); }
+            else if (item) { desc.value = item[0]; precio.value = item[1]; }
+            previaNota();
+        }
         function abrirNotas() {
             if (sucursalActual === '') { avisar('Elige primero una sucursal en el menú.'); return; }
             document.getElementById('subNotas').textContent = `Sucursal ${sucursalActual}`;
@@ -1426,12 +1445,13 @@ ${pill('MÉTODO DE PAGO:', 75, 660, 112)}${pill('NOMBRE Y FIRMA:', 334, 660, 112
             const fila = document.createElement('div');
             fila.className = 'grid grid-cols-[60px_1fr_1fr_28px] sm:grid-cols-[64px_1fr_110px_100px_32px] gap-2 items-center px-3 py-2 concepto-nota';
             fila.innerHTML = `<input type="number" min="1" max="999" value="1" required class="c-cant w-full border border-gray-300 rounded-md p-1.5 text-center" aria-label="Cantidad">`
-                + `<input list="notaServicios" maxlength="150" required class="c-desc col-span-4 sm:col-span-1 order-first sm:order-none w-full border border-gray-300 rounded-md p-1.5" placeholder="Descripción del servicio o producto" aria-label="Descripción">`
+                + `<div class="col-span-4 sm:col-span-1 order-first sm:order-none space-y-1.5"><select required onchange="elegirCatalogoNota(this)" class="c-cat w-full border border-gray-300 rounded-md p-1.5 bg-white" aria-label="Concepto"><option value="">Elige el concepto…</option>${CATALOGO_NOTA.map((c, i) => `<option value="${i}">${esc(c[0])} — ${fmtMXN.format(c[1])}</option>`).join('')}<option value="otro">Otro (escribir concepto y precio)</option></select>`
+                + `<input maxlength="150" class="c-desc hidden w-full border border-gray-300 rounded-md p-1.5" placeholder="Escribe el concepto" aria-label="Descripción del concepto"></div>`
                 + `<input type="number" min="0" step="0.01" required class="c-precio w-full border border-gray-300 rounded-md p-1.5 text-right" placeholder="Precio" aria-label="Precio unitario">`
                 + `<span class="c-imp text-right font-semibold">$0.00</span>`
                 + `<button type="button" onclick="this.parentElement.remove(); previaNota()" class="text-[#6B7B83] hover:text-red-600 text-xl leading-none" aria-label="Quitar concepto">&times;</button>`;
             cont.appendChild(fila); previaNota();
-            if (cont.children.length > 1) fila.querySelector('.c-desc').focus();
+            if (cont.children.length > 1) fila.querySelector('.c-cat').focus();
         }
         function ligarCitaNota() {
             const nombre = document.getElementById('notaNombre').value.trim().toLowerCase();
@@ -1516,7 +1536,7 @@ ${pill('MÉTODO DE PAGO:', 75, 660, 112)}${pill('NOMBRE Y FIRMA:', 334, 660, 112
             document.getElementById('notaFecha').value = fecha;
             await cargarCitasNota();
             document.getElementById('notaCitaSel').value = String(idCita); elegirCitaNota();
-            document.querySelector('.concepto-nota .c-desc')?.focus();
+            document.querySelector('.concepto-nota .c-cat')?.focus();
         }
         /** Vuelve a generar el PDF con el formato de la clínica (útil para cobros anteriores o si falló la subida). */
         async function regenerarNota(i, btn) {
