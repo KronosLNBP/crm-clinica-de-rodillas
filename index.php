@@ -1371,7 +1371,7 @@ ${pill('MÉTODO DE PAGO:', 75, 660, 112)}${pill('NOMBRE Y FIRMA:', 334, 660, 112
             document.body.appendChild(cont);
             await new Promise(r => { const img = cont.querySelector('img'); if (!img || img.complete) r(); else { img.onload = img.onerror = r; } });
             try {
-                return await html2pdf().set({ margin: 0, filename: `Remision_${d.folio}.pdf`, image: { type: 'jpeg', quality: 0.96 }, html2canvas: { scale: 3, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0, windowWidth: 1024 }, jsPDF: { unit: 'in', format: [5.5, 8.5], orientation: 'portrait' } }).from(cont.firstElementChild).output('datauristring');
+                return await html2pdf().set({ margin: 0, filename: `Remision_${d.folio}.pdf`, image: { type: 'jpeg', quality: 0.96 }, html2canvas: { scale: 3, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0 }, jsPDF: { unit: 'in', format: [5.5, 8.5], orientation: 'portrait' } }).from(cont.firstElementChild).output('datauristring');
             } finally { cont.remove(); window.scrollTo(scroll[0], scroll[1]); }
         }
 
