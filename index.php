@@ -1298,7 +1298,7 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
         }
 
         // ===== Remisión con el formato impreso de la clínica (media carta, 528 × 816 px) =====
-        const LOGO_REMISION = 'img/logo_remision.png';
+        const LOGO_REMISION = 'img/logo_remision_circulo.png';
         function htmlNotaRemision(d) {
             const AZUL = '#1F3B6E', CIELO = '#6EC3E8', PALIDO = '#BFE5F5';
             const e = (v) => esc(v ?? '');
@@ -1312,15 +1312,16 @@ $esClinico = in_array($rol, ROLES_CLINICOS, true);
             const obs = String(d.observaciones || '');
             const obsLineas = obs.match(/.{1,86}(\s|$)/g) || [];
             return `<div style="position:relative;width:528px;height:816px;overflow:hidden;background:#fff;font-family:'Montserrat',Arial,sans-serif;color:#1E2B33">
-<svg width="528" height="240" viewBox="0 0 528 240" style="position:absolute;left:0;top:0">
+<svg width="528" height="816" viewBox="0 0 528 816" style="position:absolute;left:0;top:0">
   <path d="M0,0 H120 C80,22 40,52 0,92 Z" fill="${AZUL}"/>
   <path d="M120,0 H190 C120,18 60,60 0,128 V92 C40,52 80,22 120,0 Z" fill="${CIELO}"/>
   <path d="M0,150 C110,214 250,214 360,176 C430,152 480,120 528,82 V110 C470,150 410,186 340,206 C230,238 100,228 0,180 Z" fill="${PALIDO}"/>
   <path d="M0,128 C110,196 250,200 360,160 C430,134 480,104 528,70 V96 C470,138 410,170 340,192 C230,222 100,214 0,160 Z" fill="${CIELO}"/>
   <path d="M60,170 C170,212 290,198 380,160 C440,134 490,104 528,86 V112 C480,140 430,172 360,192 C270,218 160,214 60,170 Z" fill="${AZUL}"/>
+  <g transform="translate(0,736)"><path d="M0,4 C60,30 140,52 240,58 C330,63 420,50 528,16 V80 H0 Z" fill="${PALIDO}"/><path d="M0,30 C80,56 170,70 270,70 C370,70 450,56 528,34 V80 H0 Z" fill="${CIELO}"/><path d="M0,52 C90,72 200,80 300,78 C400,76 470,64 528,52 V80 H0 Z" fill="${AZUL}"/></g>
 </svg>
 <div style="position:absolute;left:24px;top:36px;width:136px;height:136px;border-radius:50%;background:#fff;border:6px solid ${AZUL};overflow:hidden;box-shadow:0 2px 0 ${CIELO}">
-  <div style="position:absolute;left:8px;top:6px;width:108px;height:108px;border-radius:50%;overflow:hidden"><img src="${LOGO_REMISION}" alt="" style="position:absolute;width:172px;max-width:none;height:auto;left:-32px;top:-40px"><div style="position:absolute;left:0;top:82px;width:108px;height:40px;background:#fff"></div></div>
+  <img src="${LOGO_REMISION}" alt="" style="position:absolute;left:4px;top:8px;width:116px;height:116px;max-width:none">
 </div>
 <div style="position:absolute;left:176px;top:30px;width:330px;text-align:right;font-weight:800;font-size:25px;letter-spacing:.4px;color:${AZUL}">CLÍNICA DE RODILLAS</div>
 <div style="position:absolute;left:176px;top:60px;width:318px;text-align:right;font-family:'Great Vibes',cursive;font-size:31px;color:${AZUL}">Dr. Díaz Campuzano</div>
@@ -1353,28 +1354,38 @@ ${pill('MÉTODO DE PAGO:', 75, 660, 112)}${pill('NOMBRE Y FIRMA:', 334, 660, 112
 <div style="position:absolute;left:40px;top:694px;width:202px;height:20px;border-bottom:1.5px solid ${AZUL};text-align:center;font-size:11px;font-weight:600">${e(d.metodo)}</div>
 <div style="position:absolute;left:288px;top:694px;width:203px;height:20px;border-bottom:1.5px solid ${AZUL};text-align:center;font-size:11px;font-weight:600">${e(d.atendio)}</div>
 <div style="position:absolute;left:96px;top:726px;width:340px;font-size:7.6px;font-weight:700;color:${AZUL};line-height:1.45">NOTA:&nbsp; PUEDE SOLICITAR SU FACTURA MÁXIMO EL ÚLTIMO DÍA DEL MES CORRESPONDIENTE.<br>ESTA NOTA FORMA PARTE DE LA FACTURA MENSUAL GLOBAL.</div>
-<svg width="528" height="80" viewBox="0 0 528 80" style="position:absolute;left:0;bottom:0">
-  <path d="M0,4 C60,30 140,52 240,58 C330,63 420,50 528,16 V80 H0 Z" fill="${PALIDO}"/>
-  <path d="M0,30 C80,56 170,70 270,70 C370,70 450,56 528,34 V80 H0 Z" fill="${CIELO}"/>
-  <path d="M0,52 C90,72 200,80 300,78 C400,76 470,64 528,52 V80 H0 Z" fill="${AZUL}"/>
-</svg>
+
 </div>`;
         }
-        /** Genera el PDF (media carta) de una remisión con el formato de la clínica. Devuelve data-URI. */
+        /** Genera el PDF (media carta) de una remisión con el formato de la clínica. Devuelve data-URI.
+         *  Se dibuja dentro de un marco aparte de 528 × 816 px (media carta) con su propia copia de html2pdf,
+         *  así el resultado es idéntico en celular, tablet o computadora y no importa el zoom ni el desplazamiento. */
         async function pdfNotaRemision(d) {
-            if (document.fonts) { try { await Promise.all([document.fonts.load("800 25px Montserrat"), document.fonts.load("31px 'Great Vibes'"), document.fonts.load("600 12px Montserrat")]); } catch (_) {} }
-            const cont = document.createElement('div');
-            cont.style.cssText = 'position:absolute;left:0;top:0;width:528px;z-index:-1;pointer-events:none';
-            const scroll = [window.scrollX, window.scrollY];
-            window.scrollTo(0, 0);
-            cont.innerHTML = htmlNotaRemision(d);
-            document.body.appendChild(cont);
-            await new Promise(r => { const img = cont.querySelector('img'); if (!img || img.complete) r(); else { img.onload = img.onerror = r; } });
+            const h2p = (document.querySelector('script[src*="html2pdf"]') || {}).src || 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+            const ifr = document.createElement('iframe');
+            ifr.setAttribute('aria-hidden', 'true');
+            ifr.style.cssText = 'position:fixed;left:-3000px;top:0;width:528px;height:816px;border:0;pointer-events:none';
+            document.body.appendChild(ifr);
             try {
-                return await html2pdf().set({ margin: 0, filename: `Remision_${d.folio}.pdf`, image: { type: 'jpeg', quality: 0.96 }, html2canvas: { scale: 3, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0 }, jsPDF: { unit: 'in', format: [5.5, 8.5], orientation: 'portrait' } }).from(cont.firstElementChild).output('datauristring');
-            } finally { cont.remove(); window.scrollTo(scroll[0], scroll[1]); }
+                const doc = ifr.contentDocument;
+                doc.open();
+                doc.write(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=528"><base href="${esc(location.href)}">`
+                    + `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@400;500;600;700;800&display=swap">`
+                    + `<style>*,*::before,*::after{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;width:528px;height:816px;overflow:hidden}img,svg{display:block}table{border-collapse:collapse}</style><script src="${esc(h2p)}"><\/script></head><body>${htmlNotaRemision(d)}</body></html>`);
+                doc.close();
+                const win = ifr.contentWindow, limite = Date.now() + 20000;
+                while (!(win.html2pdf && [...doc.images].every(i => i.complete))) {
+                    if (Date.now() > limite) throw new Error('No se pudo preparar el PDF (revisa tu conexión).');
+                    await new Promise(r => setTimeout(r, 100));
+                }
+                try { await Promise.race([Promise.all([doc.fonts.load("800 25px Montserrat"), doc.fonts.load("600 12px Montserrat"), doc.fonts.load("31px 'Great Vibes'")]).then(() => doc.fonts.ready), new Promise(r => setTimeout(r, 4000))]); } catch (_) {}
+                return await win.html2pdf().set({
+                    margin: 0, filename: `Remision_${d.folio}.pdf`, image: { type: 'jpeg', quality: 0.96 },
+                    html2canvas: { scale: 3, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0, windowWidth: 528, windowHeight: 816 },
+                    jsPDF: { unit: 'in', format: [5.5, 8.5], orientation: 'portrait' }
+                }).from(doc.body.firstElementChild).output('datauristring');
+            } finally { ifr.remove(); }
         }
-
         // ===== Sección Remisiones =====
         const USUARIO_NOMBRE = <?= json_encode($usuario['nombre'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
         let notaCitas = [], notaIdCita = 0;
